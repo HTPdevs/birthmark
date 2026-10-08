@@ -17,7 +17,8 @@
       "infoPlist": {
         "LSApplicationQueriesSchemes": [
           "tel"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
