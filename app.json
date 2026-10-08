@@ -15,9 +15,7 @@
       "supportsTablet": true,
       "requireFullScreen": true,
       "infoPlist": {
-        "LSApplicationQueriesSchemes": [
-          "tel"
-        ],
+        "LSApplicationQueriesSchemes": ["tel"],
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -63,7 +61,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "74bef24a-562b-4e21-8153-637f0344042a"
+        "projectId": "071d5405-361e-4795-b9da-818cdafe463d"
       }
     }
   }
