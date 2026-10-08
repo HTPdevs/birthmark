@@ -75,4 +75,4 @@ UI:
 - Clock tap toggles 24h/12h display only; reports stay 24h.
 - Emergency asks for confirmation, then `Linking.openURL("tel:911")` through `PhoneAdapter`. Creates no moment. Never place a real 911 call in dev or tests; inject a mock adapter.
 - Labels max 80 chars, with the no-identifying-details guidance. Never claim anonymity or HIPAA approval.
-- Palette: `#2D3142` primary text, `#BFC0C0` dividers, `#FFFFFF` background, `#EF8354` emergency/accents (with dark text), `#4F5D75` secondary text.
+- Palette (brand kit in `assets/README.txt`): Espresso `#3B2A24` primary text, Sage `#8FA89A` dividers (never text), Cream `#FAF3EC` background, Coral `#E8775A` emergency/accents (with espresso text), Rust `#B4472C` errors, `#6B5C56` secondary text. Use the role tokens in `src/ui/theme.ts`; no hex literals elsewhere (`tests/palette.test.ts` enforces it).

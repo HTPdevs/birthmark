@@ -368,13 +368,25 @@ Birthmark is the selected app name. Use the supplied palette consistently across
 
 | Color | Interface role |
 | --- | --- |
-| #2D3142 | Primary text, bold clock digits, and current milestone on white. |
-| #BFC0C0 | Dividers, button outlines, and muted background surfaces. |
-| #FFFFFF | Main background and readable panel surfaces. |
-| #EF8354 | Emergency button and restrained active accents, with dark text. |
-| #4F5D75 | Secondary text, previous milestone labels, and secondary controls. |
+Brand kit colors and assets are in `assets/README.txt`.
 
-Use #4F5D75 rather than light gray for previous-milestone text on white. Use #2D3142 text on orange. Muted content must remain readable; validate contrast, text scaling, and distance readability on real devices.
+| Color | Interface role |
+| --- | --- |
+| Espresso #3B2A24 | Primary text, bold clock digits, and current milestone on cream. |
+| Sage #8FA89A | Dividers and button outlines. Never text: 2.3:1 on cream. |
+| Cream #FAF3EC | Main background and readable panel surfaces. |
+| Coral #E8775A | Emergency button and restrained active accents, with espresso text. |
+| Rust #B4472C | Errors and "Not saved" states. |
+
+Derived from the brand colors:
+
+| Color | Interface role |
+| --- | --- |
+| #6B5C56 (espresso 75% over cream) | Secondary text, previous milestone labels, and secondary controls. |
+| #EDEAE2 (sage 12% over cream) | Muted background surfaces and pressed rows. |
+| #F6E9E0 (rust 6% over cream) | "Not saved" pill background. |
+
+Use #6B5C56 rather than sage for previous-milestone text. Use espresso text on coral. The PDF report keeps a white page with the same text colors. Every text pair is checked against WCAG AA (4.5:1) in `tests/palette.test.ts`; still validate text scaling and distance readability on real devices.
 
 ### Technical references
 

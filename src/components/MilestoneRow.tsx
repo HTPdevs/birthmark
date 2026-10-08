@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     width: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.85)',
+    backgroundColor: colors.fade,
   },
   cueText: { fontSize: 32, color: colors.slate, fontWeight: '700' },
 });

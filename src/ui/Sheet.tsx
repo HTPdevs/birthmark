@@ -54,7 +54,7 @@ export function Sheet({ visible, title, onClose, children, side = 'center', widt
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(45,49,66,0.45)' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim },
   center: { alignItems: 'center', justifyContent: 'center', padding: space.lg },
   right: { alignItems: 'flex-end' },
   panel: { backgroundColor: colors.paper, overflow: 'hidden' },
