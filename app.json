@@ -2,6 +2,7 @@
   "expo": {
     "name": "Birthmark",
     "slug": "birthmark",
+    "owner": "htpdevs",
     "version": "1.0.0",
     "orientation": "landscape",
     "icon": "./assets/images/icon.png",
@@ -14,7 +15,9 @@
       "supportsTablet": true,
       "requireFullScreen": true,
       "infoPlist": {
-        "LSApplicationQueriesSchemes": ["tel"]
+        "LSApplicationQueriesSchemes": [
+          "tel"
+        ]
       }
     },
     "android": {
@@ -55,6 +58,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "74bef24a-562b-4e21-8153-637f0344042a"
+      }
     }
   }
 }
