@@ -1,3 +1,4 @@
+import { colors } from '@/ui/theme';
 import type { ReportModel, TimelineRow } from './reportModel';
 
 export function escapeHtml(value: string | number): string {
@@ -45,21 +46,21 @@ export function renderReportHtml(r: ReportModel): string {
 <title>${e(`Birthmark report ${h.shortId} r${h.revision}`)}</title>
 <style>
   @page { margin: 14mm 12mm; }
-  body { font-family: -apple-system, Roboto, Helvetica, Arial, sans-serif; color: #2D3142; font-size: 10.5pt; }
+  body { font-family: -apple-system, Roboto, Helvetica, Arial, sans-serif; color: ${colors.ink}; font-size: 10.5pt; }
   h1 { font-size: 16pt; margin: 0 0 4pt; }
-  h2 { font-size: 12pt; margin: 14pt 0 4pt; border-bottom: 1px solid #BFC0C0; padding-bottom: 2pt; }
+  h2 { font-size: 12pt; margin: 14pt 0 4pt; border-bottom: 1px solid ${colors.line}; padding-bottom: 2pt; }
   .meta { display: grid; grid-template-columns: max-content 1fr max-content 1fr; gap: 2pt 10pt; font-size: 10pt; }
-  .meta dt { color: #4F5D75; }
+  .meta dt { color: ${colors.slate}; }
   .meta dd { margin: 0; font-variant-numeric: tabular-nums; }
   table { width: 100%; border-collapse: collapse; font-size: 10pt; }
   thead { display: table-header-group; }
   tr { page-break-inside: avoid; break-inside: avoid; }
-  th { text-align: left; color: #4F5D75; font-weight: 600; border-bottom: 1px solid #BFC0C0; padding: 3pt 4pt; }
-  td { border-bottom: 1px solid #E6E6E6; padding: 3pt 4pt; vertical-align: top; font-variant-numeric: tabular-nums; word-break: break-word; }
-  .system { color: #4F5D75; font-style: italic; }
-  .empty { color: #4F5D75; font-style: italic; }
-  .notice { color: #4F5D75; font-size: 10pt; }
-  footer { margin-top: 16pt; color: #4F5D75; font-size: 10pt; border-top: 1px solid #BFC0C0; padding-top: 4pt; }
+  th { text-align: left; color: ${colors.slate}; font-weight: 600; border-bottom: 1px solid ${colors.line}; padding: 3pt 4pt; }
+  td { border-bottom: 1px solid ${colors.mist}; padding: 3pt 4pt; vertical-align: top; font-variant-numeric: tabular-nums; word-break: break-word; }
+  .system { color: ${colors.slate}; font-style: italic; }
+  .empty { color: ${colors.slate}; font-style: italic; }
+  .notice { color: ${colors.slate}; font-size: 10pt; }
+  footer { margin-top: 16pt; color: ${colors.slate}; font-size: 10pt; border-top: 1px solid ${colors.line}; padding-top: 4pt; }
 </style>
 </head>
 <body>

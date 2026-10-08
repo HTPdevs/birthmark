@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   ok: { borderColor: colors.line },
-  failed: { borderColor: colors.danger, backgroundColor: '#FDECEA', minHeight: 48 },
+  failed: { borderColor: colors.danger, backgroundColor: colors.dangerSurface, minHeight: 48 },
   okText: { color: colors.success, fontWeight: '700', fontSize: 15 },
   pendingText: { color: colors.slate, fontWeight: '700', fontSize: 15 },
   failedText: { color: colors.danger, fontWeight: '800', fontSize: 16 },

@@ -81,6 +81,6 @@ const textStyles = StyleSheet.create({
   primary: { color: colors.paper },
   secondary: { color: colors.ink },
   ghost: { color: colors.slate },
-  emergency: { color: colors.ink },
+  emergency: { color: colors.onAccent },
   danger: { color: colors.danger },
 });
