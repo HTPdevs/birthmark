@@ -12,41 +12,45 @@ Product in one line: offline, single-device, landscape app that lets any birth p
 
 ## Current state
 
-- Fresh `create-expo-app` scaffold (Expo SDK 57, React Native 0.86, React 19.2, TypeScript strict). `npm run reset-project` has already been run: the starter app lives in `example/` (gitignored) and `src/app/` holds a blank `_layout.tsx` + `index.tsx`.
-- The `reset-project` script in `package.json` is now stale (`scripts/` moved to `example/scripts/`). Don't run it.
-- None of the spec's dependencies are installed yet. Install with `npx expo install`: `expo-sqlite expo-print expo-sharing expo-file-system expo-keep-awake expo-haptics expo-dev-client expo-screen-orientation`.
-- No test runner, no ESLint config, no git commits, no remote yet. Spec wants a `tests/` dir covering timing, recovery, persistence, and report.
-- Package manager is npm (`package-lock.json`).
+Working prototype of the MVP (Expo SDK 57, React Native 0.86, React 19.2, TypeScript strict). Per-scenario status and what is still unverified: `docs/acceptance-status.md`. Package manager is npm.
+
+`npx expo install` fails on this machine because `~/.npmrc` sets `allow-scripts`. Read the SDK-compatible version from `node_modules/expo/bundledNativeModules.json` and run `npm install <pkg>@<that range>` instead.
 
 ## Commands
 
 ```bash
-npm start                      # expo start
-npx expo start --dev-client    # once expo-dev-client + native module exist
-npx expo run:ios [--device]    # local native build (required for the clock module)
-npx expo run:android [--device]
-npx expo lint
-npx tsc --noEmit
-npx expo-doctor
+npm test                                  # jest (preset jest-expo/node), tests/**/*.test.ts
+npx jest tests/sessionController.test.ts -t "R05"   # one test by name or scenario ID
+npm run typecheck                         # tsc --noEmit
+npm run lint                              # expo lint
+npm run android / npm run ios             # expo run:* builds the dev client (needs the native module)
+npm start                                 # expo start --dev-client
 ```
 
-Expo Go cannot run this app once the local `ClockSnapshot` native module exists. Offline acceptance requires locally signed Release builds (spec "Daily testing and offline validation").
+Expo Go cannot load the local `ClockSnapshot` module. Without it the app uses a JS fallback clock (flagged `fallback` in reports, warned on the home screen). Offline acceptance needs locally signed Release builds.
 
-## Planned architecture (from spec)
+## Architecture
 
-Spec layout uses `app/`; in this repo routes go in `src/app/` and everything else under `src/`. Path aliases: `@/*` -> `src/*`, `@/assets/*` -> `assets/*`. Typed routes and React Compiler are enabled in `app.json`.
+Routes are in `src/app/`. Path alias: `@/*` -> `src/*` (tests use it, and jest maps it).
 
-| Path | Layer |
-| --- | --- |
-| `src/app/` | Expo Router routes: home/history, record, report |
-| `src/components/` | capture button, milestone row, label area, events drawer, sheets |
-| `src/domain/` | models, session service, time rules (pure, testable) |
-| `src/storage/` | SQLite migrations, repositories, serialized write queue |
-| `src/report/` | one normalized report model feeding both on-screen view and escaped-HTML PDF (expo-print + expo-sharing) |
-| `modules/clock-snapshot/` | local Expo module (Swift + Kotlin), created via `npx create-expo-module@latest --local` |
-| Platform adapters | keep-awake, haptics, orientation, file export, `PhoneAdapter` for `tel:911` |
+- `src/domain/` is pure TypeScript with no React Native imports, so all of it runs in Jest.
+  - `types.ts`: branded `WallMs` / `ContinuousMs` / `ElapsedMs`.
+  - `time.ts`: anchor math, boot verification, recovery estimate, clock-change detection, formatting and parsing.
+  - `timeline.ts`: effective ordering, intervals, live status, row mode.
+  - `manualTime.ts`: converts manual or corrected times through the nearest captured reference.
+  - `emergency.ts`: the `tel:` handoff over an injected `PhoneAdapter`.
+- `SessionController` (`src/domain/sessionController.ts`) owns one loaded session and is the only writer. Every capture reads `clock.read()` first and allocates `captureSequence` synchronously. It then updates in-memory state (subscribers re-render via `useSyncExternalStore`) and only after that enqueues an idempotent DB op on `WriteQueue`. `start()` and `resume()` write to the DB directly and await the commit before the caller may show recording. `load()` on an active session runs recovery: it keeps the anchor if the boot is the same, otherwise it uses the wall-checkpoint estimate and adds a flag.
+- `src/storage/`:
+  - `db.ts`: the `Db` interface (the subset of expo-sqlite used) and migrations via `PRAGMA user_version`.
+  - `repository.ts`: row mapping; every insert is `ON CONFLICT DO NOTHING` so retries never duplicate.
+  - `writeQueue.ts`: serial FIFO. A failed op stays at the head and blocks later ops until `retry()`.
+- `src/report/`: `buildReport()` returns one model, used by both the report screen and `renderReportHtml()` (escaped, no external assets) for expo-print.
+- `src/platform/`: the only React Native / Expo-module code outside the UI (`clock`, `database`, `phone`, `exportPdf`).
+- `src/state/store.ts`: `appStore` singleton (DB, active controller, controller cache, session list, clock-format pref) plus hooks. `useClockTick` is display-only at 4 Hz.
+- `modules/clock-snapshot/`: Swift (`mach_continuous_time`, `kern.boottime` boot id, `isExcludedFromBackup`) and Kotlin (`elapsedRealtimeNanos`, `Settings.Global.BOOT_COUNT`). Loaded with `requireOptionalNativeModule`.
+- Tests: `tests/helpers/sqlite.ts` wraps better-sqlite3 in the `Db` interface. It includes `failNext(regex)` to simulate disk-full errors. `tests/helpers/fakeClock.ts` provides `advance`, `setWallBy`, and `reboot`. Name tests after spec IDs.
 
-Session state lives in a small reducer/service; no global state library required.
+Emergency in development is `demo` mode (no call). Use `EXPO_PUBLIC_PHONE_MODE=live` to enable the real handoff, or `EXPO_PUBLIC_TEST_CALL_NUMBER` to dial a non-emergency number.
 
 ## Invariants that are easy to break
 
@@ -72,9 +76,3 @@ UI:
 - Emergency asks for confirmation, then `Linking.openURL("tel:911")` through `PhoneAdapter`. Creates no moment. Never place a real 911 call in dev or tests; inject a mock adapter.
 - Labels max 80 chars, with the no-identifying-details guidance. Never claim anonymity or HIPAA approval.
 - Palette: `#2D3142` primary text, `#BFC0C0` dividers, `#FFFFFF` background, `#EF8354` emergency/accents (with dark text), `#4F5D75` secondary text.
-
-## Testing approach (from spec)
-
-- Deterministic clock-service tests with injected snapshots.
-- Real SQLite integration tests for commit and recovery.
-- Physical-device end-to-end runs for acceptance; simulator success alone is insufficient.
