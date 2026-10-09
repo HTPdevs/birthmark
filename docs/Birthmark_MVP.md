@@ -204,7 +204,7 @@ Recommended stack: React Native, Expo, and TypeScript with strict checking. Type
 
 | Layer | Responsibility |
 | --- | --- |
-| Screens and components | Home/history, landscape recording, live status, milestone row, report, events drawer, correction and confirmation sheets |
+| Screens and components | Home, history, landscape recording, live status, milestone row, report, events drawer, correction and confirmation sheets |
 | Session service | Start, mark, label, create/end event, finish/resume, corrections, APGAR assessment saves, revision control |
 | Clock service | Native snapshot reads, elapsed anchors, boot checks, clock-change flags, recovery estimates |
 | Repository | SQLite transactions, mutation queue, migration, idempotent retries, session hydration |
@@ -216,7 +216,7 @@ Recommended stack: React Native, Expo, and TypeScript with strict checking. Type
 Use expo-sqlite, expo-print, expo-sharing, expo-file-system, expo-keep-awake, expo-haptics, expo-screen-orientation, and expo-dev-client. Use Expo Router from the default scaffold. Keep session state in a small reducer/service; an external global-state library is optional, not required.
 
 ```text
-app/                 home, record, report routes
+app/                 home, history, record, report routes
 src/components/      capture button, label area, event drawer
 src/domain/          models, session service, time rules
 src/storage/         migrations, repositories, write queue
