@@ -36,3 +36,59 @@ export async function requestEmergencyCall(
     return { kind: 'unavailable', message: CALL_FALLBACK_MESSAGE };
   }
 }
+
+/** Confirm dialog copy. `number` is what will actually be dialed, so test builds don't claim 911. */
+export function emergencyConfirmMessage(number: string): string {
+  return `You are about to dial ${number} and end this session. Continue?`;
+}
+
+export function demoCallNotice(url: string): string {
+  return `Demo - no call placed (${url}).`;
+}
+
+export const FINISH_FAILED_MESSAGE =
+  'The call was started, but the session could not be finished. Finish it from the recording screen.';
+
+export type EmergencyFinishOutcome =
+  | { kind: 'finished'; sessionId: string }
+  | { kind: 'failed'; message: string };
+
+export type EmergencyFinishAndCall = {
+  /** Settles when the phone handoff was requested (or found unavailable). Never rejects. */
+  call: Promise<EmergencyResult>;
+  /** Settles when the finish commits or fails. Never rejects; may stay pending while a write waits for Retry. */
+  finished: Promise<EmergencyFinishOutcome>;
+};
+
+/**
+ * Emergency "Yes": requests the call and finishes the active session at the same
+ * time. The dial is requested first and never waits on the finish, so a slow or
+ * failed write (disk full, blocked queue) cannot delay or block the call. The two
+ * outcomes are returned separately so the caller can react to the call result
+ * even while the finish is still waiting on storage. Creates no moment.
+ */
+export function emergencyFinishAndCall({
+  finish,
+  phone,
+  number = EMERGENCY_NUMBER,
+}: {
+  /** Finishes the active session; resolves with its id once committed. */
+  finish: () => Promise<string>;
+  phone: PhoneAdapter;
+  number?: string;
+}): EmergencyFinishAndCall {
+  const call = requestEmergencyCall(phone, number).catch(
+    (): EmergencyResult => ({ kind: 'unavailable', message: CALL_FALLBACK_MESSAGE }),
+  );
+  let finished: Promise<EmergencyFinishOutcome>;
+  try {
+    finished = finish().then(
+      (sessionId): EmergencyFinishOutcome => ({ kind: 'finished', sessionId }),
+      (): EmergencyFinishOutcome => ({ kind: 'failed', message: FINISH_FAILED_MESSAGE }),
+    );
+  } catch {
+    // A synchronous throw from finish must not escape: the call is already requested.
+    finished = Promise.resolve({ kind: 'failed', message: FINISH_FAILED_MESSAGE });
+  }
+  return { call, finished };
+}
