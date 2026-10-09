@@ -1,10 +1,9 @@
 import { FULL_ROW, POST_FIRST_CRY_ROW } from '@/domain/types';
 import {
-  LABELED_SLOT_MIN,
+  MILESTONE_BUTTON_HEIGHT,
   SCROLL_BUTTON_WIDTH,
   SINCE_VALUE_MAX,
   SINCE_VALUE_MIN,
-  headerShowsLabels,
   milestoneRowItems,
   milestoneRowLayout,
   recordingBands,
@@ -100,19 +99,25 @@ describe('recording screen bands', () => {
     expect(clock / (clock + body)).toBeCloseTo(1 / 3);
   });
 
-  it('gives the clock a quarter while the label box shows', () => {
+  it('gives the clock a fifth while the label box shows', () => {
     const { clock, body } = recordingBands(true);
-    expect(clock / (clock + body)).toBeCloseTo(1 / 4);
+    expect(clock / (clock + body)).toBeCloseTo(1 / 5);
   });
 
-  it('a 390pt phone (369 usable) keeps a touch-target milestone row with the label box', () => {
-    // Body minus vertical padding, "Time since" block at a 100pt clock, label box ~94, two gaps.
+  it('milestone buttons are back to their original 64pt height', () => {
+    expect(MILESTONE_BUTTON_HEIGHT).toBe(64);
+  });
+
+  it.each([false, true])('a 390pt phone (369 usable) fits the full-height row (label box shown: %s)', (labelBox) => {
+    // Body minus vertical padding, "Time since" at the clock font the band allows, label box ~94, gaps.
     const usable = 369;
-    const { clock, body } = recordingBands(true);
+    const { clock, body } = recordingBands(labelBox);
+    const clockFont = ((usable * clock) / (clock + body)) * 0.9;
     const bodyHeight = (usable * body) / (clock + body) - 16;
-    const f = sinceTimerFonts(100);
+    const f = sinceTimerFonts(clockFont);
     const timer = Math.round(f.label * 1.2) + Math.round(f.value * 1.1);
-    expect(bodyHeight - timer - 94 - 16).toBeGreaterThanOrEqual(52);
+    const labelHeight = labelBox ? 94 + 8 : 0;
+    expect(bodyHeight - timer - 8 - labelHeight).toBeGreaterThanOrEqual(MILESTONE_BUTTON_HEIGHT);
   });
 });
 
@@ -136,23 +141,5 @@ describe('"Time since" font sizes', () => {
   it('falls back to a default clock size for bad input', () => {
     expect(sinceTimerFonts(Number.NaN)).toEqual(sinceTimerFonts(72));
     expect(sinceTimerFonts(0)).toEqual(sinceTimerFonts(72));
-  });
-});
-
-describe('History / Finish bar labels', () => {
-  it('shows icon and label when each slot is at least LABELED_SLOT_MIN wide', () => {
-    expect(headerShowsLabels(LABELED_SLOT_MIN * 2 + space.sm)).toBe(true);
-    expect(headerShowsLabels(LABELED_SLOT_MIN * 2 + space.sm - 1)).toBe(false);
-  });
-
-  it('844pt phone (750 inside insets) keeps labels; 667pt phone stacks icon over label', () => {
-    const bar = (screen: number) => screen * 0.35 - 1 - 2 * space.md;
-    expect(headerShowsLabels(bar(750))).toBe(true);
-    expect(headerShowsLabels(bar(667))).toBe(false);
-    expect(headerShowsLabels(bar(1194))).toBe(true);
-  });
-
-  it('shows labels before the bar is measured', () => {
-    expect(headerShowsLabels(0)).toBe(true);
   });
 });

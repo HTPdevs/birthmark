@@ -148,8 +148,9 @@ const styles = StyleSheet.create({
   prevName: { color: colors.slate, fontSize: 15, flexShrink: 1 },
   prevTime: { color: colors.slate, fontSize: 15 },
   current: { borderTopWidth: 1, borderTopColor: colors.line, paddingTop: space.sm, marginTop: space.xs },
-  currentName: { color: colors.ink, fontSize: 26, fontWeight: '800' },
-  currentTime: { color: colors.ink, fontSize: 18, fontWeight: '600' },
+  // The captured time is the headline the moment a button is pressed; the name labels it.
+  currentName: { color: colors.ink, fontSize: 20, fontWeight: '800' },
+  currentTime: { color: colors.ink, fontSize: 40, lineHeight: 46, fontWeight: '800' },
   pressed: { opacity: 0.6 },
   since: { color: colors.ink, fontSize: 15, fontWeight: '700', marginTop: 2 },
   actions: { flexDirection: 'row', gap: space.xs },
