@@ -19,8 +19,8 @@ Use React Native with Expo and TypeScript. Share the interface, persistence, and
 ### Decisions established for the MVP
 
 - One active session per device; multiple event timers can overlap within that session.
-- Landscape recording screen with a large clock, swipeable milestone row, live status panel, and protected Emergency action.
-- Clock time, session elapsed time, and time since the previous moment are visible.
+- Landscape recording screen with a large clock, milestone row, dedicated Resuscitate and APGAR buttons, live status panel, and protected Emergency action.
+- Clock time and time since the previous moment are visible on the recording screen.
 - Session time continues through screen lock, backgrounding, and app closure until explicitly finished.
 - Patient names and identity fields are excluded. Optional short labels carry guidance against identifying information.
 - The deliverable is a build specification. The implementation steps below create a project scaffold; application code must still be implemented and tested.
@@ -57,27 +57,29 @@ A generic moment requires one tap from the recording screen. No typing or confir
 
 ## Recording interface
 
+Recording-screen layout decision (product owner, October 2026): the recording screen has no Mark moment / Other button, no Session elapsed or Recording to display, and no Events button. Resuscitate and APGAR moved out of the milestone row into their own buttons. Generic captures and event timers remain in the session service, timeline, and report; where this document describes tapping Mark moment or opening Events on the recording screen, that control is not present. This decision takes precedence over those passages.
+
 Default the app to landscape. The recording viewport has two persistent panels: the clock and capture controls on the left, and live milestone status on the right. Start with a 60/40 width split, then adjust to preserve clock legibility and touch targets on each supported device.
 
 ### Large real time clock
 
 Place the current device clock at the top left in bold tabular digits. Start in 24-hour format, HH:mm:ss. Tapping the clock toggles to h:mm:ss AM/PM; tapping again restores 24-hour time. Include a small 24h or 12h indicator and an accessible Toggle clock format label. This is a display change only and never records a moment or modifies a timestamp.
 
-Use the largest unclipped clock size the left panel permits, starting around 72 logical units on phones and scaling up on tablets. Reading the clock from about 10 feet is a physical-device acceptance target, not a guarantee based on font size. Keep session elapsed and Since last moment underneath in smaller, clearly labeled type.
+Use the largest unclipped clock size the left panel permits, starting around 72 logical units on phones and scaling up on tablets. Reading the clock from about 10 feet is a physical-device acceptance target, not a guarantee based on font size. Keep Since last moment underneath in smaller, clearly labeled type.
 
-### Swipeable milestone controls
+### Milestone controls
 
-Directly below the clock, show horizontally swipeable buttons in this exact order: ROM, Crown, Head, Body, First Cry, Resuscitate, APGAR. Each milestone tap captures and labels one moment immediately, with no confirmation or typing. APGAR is the exception: it opens the assessment editor without creating a timestamped moment. A swipe scrolls the row and must not trigger capture. Use a partly visible next button and a small scroll cue to make additional controls discoverable.
+Directly below the clock, show milestone buttons in this exact order: ROM, Crown, Head, Body, First Cry. Size the buttons to share the row width so every button is visible without horizontal sliding and First Cry shows by default. Each milestone tap captures and labels one moment immediately, with no confirmation or typing. If sharing the width would make a button narrower than the minimum touch target, the row scrolls instead and shows a small scroll cue. A swipe must not trigger capture.
 
-After First Cry is recorded, present Separation Gush, Placenta, APGAR in that order as the active subset. Recommended behavior is to replace the row temporarily and provide All milestones to restore the full row. Permit out-of-order and repeat captures; these buttons document operator observations rather than enforce a clinical sequence.
+After First Cry is recorded, present Separation Gush, Placenta in that order as the active subset. Recommended behavior is to replace the row temporarily and provide All milestones to restore the full row. Permit out-of-order and repeat captures; these buttons document operator observations rather than enforce a clinical sequence.
 
-Keep Mark moment / Other as a secondary capture action below the row. It captures immediately, then offers an optional 80-character label: Use event labels only. Do not enter names or identifying details. Keep this action reachable while the keyboard is open. A newer capture never overwrites an earlier unlabeled record.
+Below the row, show two large buttons: Resuscitate and APGAR. Resuscitate records the Resuscitate milestone immediately, the same way as a milestone tap, and uses the warning color (rust with cream text). APGAR opens the assessment editor without creating a timestamped moment. The optional 80-character label box for the most recent generic capture sits beside these buttons, with the guidance: Use event labels only. Do not enter names or identifying details. A newer capture never overwrites an earlier unlabeled record.
 
 ### Live status and event management
 
 The right panel shows the latest included milestone prominently with its capture timestamp underneath. Previous milestones move upward, remain visible, and use quieter typography. For Crown followed by Head, show Crown above Head and the fixed elapsed interval labeled Since Crown. Maintain a scrollable history as the list grows; keep the current milestone visible.
 
-Generic moments and event boundaries do not replace the prominent milestone or reset its transition interval. Since last moment remains a separate timer for all included moments. The panel represents recorded observations, not an automatically determined clinical state. Events opens a compact drawer for selecting, starting, and ending overlapping timers.
+Generic moments and event boundaries do not replace the prominent milestone or reset its transition interval. Since last moment remains a separate timer for all included moments. The panel represents recorded observations, not an automatically determined clinical state. The top bar holds the save status and a full-color Finish button; there is no Events button on the recording screen.
 
 Place Emergency at the bottom right, separate from other controls. Tapping opens Are you sure? with Yes and No and explanatory text: Yes opens the phone app to call 911. No or dismissal makes no recording change. Timers continue through the dialog. Yes opens the system phone interface to call 911. Complete any system confirmation there; session timing continues. This action does not automatically create a timed moment.
 
@@ -206,7 +208,7 @@ Recommended stack: React Native, Expo, and TypeScript with strict checking. Type
 
 | Layer | Responsibility |
 | --- | --- |
-| Screens and components | Home, history, landscape recording, live status, milestone row, report, events drawer, correction and confirmation sheets |
+| Screens and components | Home, history, landscape recording, live status, milestone row, report, correction and confirmation sheets |
 | Session service | Start, mark, label, create/end event, finish/resume, corrections, APGAR assessment saves, revision control |
 | Clock service | Native snapshot reads, elapsed anchors, boot checks, clock-change flags, recovery estimates |
 | Repository | SQLite transactions, mutation queue, migration, idempotent retries, session hydration |
@@ -219,7 +221,7 @@ Use expo-sqlite, expo-print, expo-sharing, expo-file-system, expo-keep-awake, ex
 
 ```text
 app/                 home, history, record, report routes
-src/components/      capture button, label area, event drawer
+src/components/      Resuscitate and APGAR buttons, label area
 src/domain/          models, session service, time rules
 src/storage/         migrations, repositories, write queue
 src/report/          report model, HTML renderer, export
@@ -343,11 +345,11 @@ L02  From roughly 10 feet, practice testers read the current clock accurately on
 
 L03  Toggle 24-hour and 12-hour time repeatedly, including noon and midnight. Show AM/PM in 12-hour mode. No new moment is created and all existing timestamps and elapsed values remain unchanged.
 
-L04  Reveal every milestone by swiping. Confirm the exact order ROM, Crown, Head, Body, First Cry, Resuscitate, APGAR. Scroll gestures create zero captures.
+L04  Every milestone button is visible without swiping. Confirm the exact order ROM, Crown, Head, Body, First Cry, with Resuscitate and APGAR as separate buttons below the row. Gestures across the row create zero captures.
 
 L05  Capture Crown, then Head 30 seconds later. Crown remains muted above Head, Head shows its capture time, and Since Crown displays 00:00:30 based on elapsed time.
 
-L06  Capture First Cry. Show Separation Gush, Placenta, APGAR in that order. Restore All milestones and record a repeat or out-of-order milestone without losing history.
+L06  Capture First Cry. Show Separation Gush, Placenta in that order. Restore All milestones and record a repeat or out-of-order milestone without losing history.
 
 L07  Open Emergency, choose No, and dismiss it. No record, timer, or phone handoff occurs. In automated tests, choose Yes and assert that the mocked phone adapter receives tel:911 exactly once. The session remains active. Never place a real 911 call during testing.
 
@@ -359,7 +361,7 @@ Emergency is a calling action. After Yes, Birthmark hands off to the system phon
 
 APGAR opens an assessment editor with two options: 1-minute APGAR and 5-minute APGAR. Each option offers integer scores 0 through 10. No score is preselected; an unset score is different from zero. Save the chosen assessment label and score without a clinical occurrence timestamp. Enter or revise either assessment independently. These are operator-entered assessment labels, not scheduled timers, calculated scores, or clinical recommendations.
 
-The First Cry row replacement with All milestones is the recommended default. It keeps the screen compact and preserves access to Resuscitate and earlier milestones. ROM and Resuscitate remain moment labels unless explicitly started as separate event timers. APGAR assessments never advance the timed milestone status or reset the Since last moment display.
+The First Cry row replacement with All milestones is the recommended default. It keeps the screen compact and preserves access to earlier milestones. Resuscitate and APGAR stay available through their own buttons. ROM and Resuscitate remain moment labels unless explicitly started as separate event timers. APGAR assessments never advance the timed milestone status or reset the Since last moment display.
 
 L09  Open APGAR. Select 1-minute APGAR and score 0, then 5-minute APGAR and score 10. Both assessments persist separately and survive relaunch. No timed moment or live-status transition is created. Reject values outside the integer range 0–10; leave missing assessments unset.
 
@@ -385,7 +387,7 @@ Brand kit colors and assets are in `assets/README.txt`.
 | Sage #8FA89A | Dividers and button outlines. Never text: 2.3:1 on cream. |
 | Cream #FAF3EC | Main background and readable panel surfaces. |
 | Coral #E8775A | Emergency button and restrained active accents, with espresso text. |
-| Rust #B4472C | Errors and "Not saved" states. |
+| Rust #B4472C | Errors, "Not saved" states, and the Resuscitate button (cream text). |
 
 Derived from the brand colors:
 

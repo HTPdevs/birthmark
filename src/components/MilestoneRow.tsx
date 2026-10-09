@@ -20,9 +20,6 @@ type Props = {
   onShowAll: () => void;
 };
 
-// Roughly 4.4 buttons fit, so the next one is always partly visible.
-const VISIBLE_BUTTONS = 4.4;
-
 /**
  * Horizontally swipeable milestone buttons. A drag scrolls the row and cancels
  * the press, so swiping never captures. Resuscitate and APGAR have their own
@@ -32,7 +29,9 @@ export function MilestoneRow({ mode, onCapture, onShowAll }: Props) {
   const [width, setWidth] = useState(0);
   const [atEnd, setAtEnd] = useState(false);
   const codes = mode === 'all' ? FULL_ROW : POST_FIRST_CRY_ROW;
-  const buttonWidth = width ? Math.max(TOUCH * 1.6, (width - space.sm * 4) / VISIBLE_BUTTONS) : 120;
+  const count = codes.length + (mode === 'post_first_cry' ? 1 : 0);
+  const layout = milestoneRowLayout(width, count);
+  const sized = layout.buttonWidth === null ? styles.flexButton : { width: layout.buttonWidth };
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
@@ -48,7 +47,7 @@ export function MilestoneRow({ mode, onCapture, onShowAll }: Props) {
         onScroll={onScroll}
         onContentSizeChange={onContentSize}
         scrollEventThrottle={64}
-        contentContainerStyle={styles.row}
+        contentContainerStyle={layout.scroll ? styles.scrollRow : styles.fitRow}
         accessibilityLabel="Milestones">
         {codes.map((code) => (
           <Pressable
@@ -68,14 +67,19 @@ export function MilestoneRow({ mode, onCapture, onShowAll }: Props) {
             onPress={onShowAll}
             accessibilityRole="button"
             accessibilityLabel="All milestones"
-            style={({ pressed }) => [styles.button, styles.allButton, { width: buttonWidth }, pressed && styles.pressed]}>
-            <Text style={[styles.label, styles.allLabel]} numberOfLines={2} maxFontSizeMultiplier={1.4}>
+            style={({ pressed }) => [styles.button, styles.allButton, sized, pressed && styles.pressed]}>
+            <Text
+              style={[styles.label, styles.allLabel]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+              maxFontSizeMultiplier={1.4}>
               All milestones
             </Text>
           </Pressable>
         ) : null}
       </ScrollView>
-      {!atEnd ? (
+      {layout.scroll && !atEnd ? (
         <View pointerEvents="none" style={styles.cue} accessible={false}>
           <Text style={styles.cueText}>{'›'}</Text>
         </View>
@@ -86,14 +90,16 @@ export function MilestoneRow({ mode, onCapture, onShowAll }: Props) {
 
 const styles = StyleSheet.create({
   wrap: { position: 'relative' },
-  row: { gap: space.sm, paddingRight: space.xl },
+  fitRow: { flexGrow: 1, gap: space.sm },
+  scrollRow: { gap: space.sm, paddingRight: space.xl },
+  flexButton: { flex: 1 },
   button: {
     minHeight: 64,
     borderRadius: radius.md,
     backgroundColor: colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: space.sm,
+    paddingHorizontal: space.xs,
   },
   allButton: { backgroundColor: colors.paper, borderWidth: 2, borderColor: colors.line },
   pressed: { opacity: 0.65 },
