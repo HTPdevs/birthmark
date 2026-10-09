@@ -1,11 +1,19 @@
+import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { QueueStatus } from '../storage/writeQueue';
+import { Button } from '../ui/Button';
+import { saveStatusView } from '../ui/saveStatusView';
 import { colors, radius, space } from '../ui/theme';
 
-/** Never claims "Saved" before every queued write has committed. */
+/**
+ * Failed save: "Not saved · Retry" (tap retries). Queued writes: "Saving".
+ * Otherwise a History button. Never claims "Saved" before every queued write
+ * has committed.
+ */
 export function SaveStatus({ queue, onRetry }: { queue: QueueStatus; onRetry: () => void }) {
-  if (queue.failed) {
+  const view = saveStatusView(queue);
+  if (view === 'failed') {
     return (
       <Pressable
         onPress={onRetry}
@@ -16,10 +24,21 @@ export function SaveStatus({ queue, onRetry }: { queue: QueueStatus; onRetry: ()
       </Pressable>
     );
   }
+  if (view === 'saving') {
+    return (
+      <View style={[styles.pill, styles.ok]} accessible accessibilityLabel="Saving">
+        <Text style={styles.pendingText}>Saving</Text>
+      </View>
+    );
+  }
   return (
-    <View style={[styles.pill, styles.ok]} accessible accessibilityLabel={queue.pending ? 'Saving' : 'All saved'}>
-      <Text style={queue.pending ? styles.pendingText : styles.okText}>{queue.pending ? 'Saving' : 'All saved'}</Text>
-    </View>
+    <Button
+      label="History"
+      variant="secondary"
+      accessibilityHint="Opens finished sessions"
+      onPress={() => router.push('/history')}
+      testID="save-status-history"
+    />
   );
 }
 
@@ -33,7 +52,6 @@ const styles = StyleSheet.create({
   },
   ok: { borderColor: colors.line },
   failed: { borderColor: colors.danger, backgroundColor: colors.dangerSurface, minHeight: 48 },
-  okText: { color: colors.success, fontWeight: '700', fontSize: 15 },
   pendingText: { color: colors.slate, fontWeight: '700', fontSize: 15 },
   failedText: { color: colors.danger, fontWeight: '800', fontSize: 16 },
 });
