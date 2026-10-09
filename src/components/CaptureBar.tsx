@@ -12,18 +12,19 @@ type Props = {
   target: Moment | null;
   targetSave: SaveState | undefined;
   events: SessionEvent[];
-  groupName: string;
-  onMark: (pendingLabel: { momentId: string; text: string } | null) => void;
+  onResuscitate: () => void;
+  onApgar: () => void;
   onSaveLabel: (momentId: string, text: string) => void;
   onDismiss: () => void;
 };
 
 /**
- * "Mark moment / Other" captures immediately. The optional label for the most
- * recent capture sits right beside it so marking stays reachable while typing.
- * Text typed for an earlier capture is committed to that capture, never moved.
+ * Dedicated Resuscitate and APGAR buttons, with the optional label for the most
+ * recent generic capture beside them. Resuscitate records the RESUSCITATE
+ * milestone immediately; APGAR opens the score editor and records no time.
+ * Neither changes the label target, so text being typed stays with its capture.
  */
-export function CaptureBar({ target, targetSave, events, groupName, onMark, onSaveLabel, onDismiss }: Props) {
+export function CaptureBar({ target, targetSave, events, onResuscitate, onApgar, onSaveLabel, onDismiss }: Props) {
   const [text, setText] = useState('');
   const targetId = target?.id ?? null;
   const prevTarget = useRef<string | null>(targetId);
@@ -35,22 +36,25 @@ export function CaptureBar({ target, targetSave, events, groupName, onMark, onSa
     }
   }, [targetId]);
 
-  const mark = () => {
-    const pending = targetId && text.trim() ? { momentId: targetId, text } : null;
-    onMark(pending);
-  };
-
   return (
     <View style={styles.wrap}>
       <View style={styles.row}>
         <Button
-          label="Mark moment / Other"
-          onPress={mark}
-          variant="primary"
+          label="Resuscitate"
+          onPress={onResuscitate}
+          variant="warning"
           large
-          style={styles.mark}
-          accessibilityHint={`Records a moment now in ${groupName}. Label is optional.`}
-          testID="mark-moment"
+          style={styles.action}
+          accessibilityHint="Records the Resuscitate milestone now"
+          testID="resuscitate"
+        />
+        <Button
+          label="APGAR"
+          onPress={onApgar}
+          large
+          style={styles.action}
+          accessibilityHint="Opens APGAR scores. Does not record a time."
+          testID="apgar"
         />
         {target ? (
           <View style={styles.labelBox}>
@@ -88,7 +92,7 @@ export function CaptureBar({ target, targetSave, events, groupName, onMark, onSa
 const styles = StyleSheet.create({
   wrap: { gap: space.xs },
   row: { flexDirection: 'row', gap: space.md, alignItems: 'stretch' },
-  mark: { flexShrink: 0, minWidth: 200 },
+  action: { flexShrink: 0, minWidth: 180 },
   labelBox: { flex: 1, gap: space.xs, justifyContent: 'center' },
   meta: { fontSize: 15, color: colors.slate },
   saved: { color: colors.success, fontWeight: '700' },

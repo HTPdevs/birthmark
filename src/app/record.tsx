@@ -15,8 +15,8 @@ import { MilestoneRow } from '../components/MilestoneRow';
 import { SaveStatus } from '../components/SaveStatus';
 import type { SessionController } from '../domain/sessionController';
 import { formatElapsed } from '../domain/time';
-import { eventName, sinceLastMoment } from '../domain/timeline';
-import type { MilestoneCode } from '../domain/types';
+import { sinceLastMoment } from '../domain/timeline';
+import type { MilestoneCode, RowMilestoneCode } from '../domain/types';
 import { appStore, useAppState, useClockTick, useControllerState } from '../state/store';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -62,18 +62,9 @@ function Recording({ controller }: { controller: SessionController }) {
   }
   const sinceLast = sinceLastMoment(data.moments, elapsed);
   const activeEvents = data.events.filter((e) => e.status === 'active');
-  const selected = activeEvents.find((e) => e.id === state.selectedEventId);
-  const groupName = selected ? eventName(selected) : 'Session';
   const target = state.labelTargetId ? data.moments.find((m) => m.id === state.labelTargetId) ?? null : null;
 
-  // Capture happens first; the pending label for the earlier moment is committed after.
-  const mark = (pending: { momentId: string; text: string } | null) => {
-    controller.markMoment();
-    tap();
-    if (pending) controller.labelMoment(pending.momentId, pending.text);
-  };
-
-  const milestone = (code: Exclude<MilestoneCode, 'APGAR'>) => {
+  const milestone = (code: RowMilestoneCode | Extract<MilestoneCode, 'RESUSCITATE'>) => {
     controller.markMilestone(code);
     tap();
   };
@@ -98,33 +89,22 @@ function Recording({ controller }: { controller: SessionController }) {
         <View style={styles.left}>
           <BigClock snapshot={snapshot} format={clockFormat} onToggle={() => appStore.toggleClockFormat()} />
           <View style={styles.timers}>
-            <View accessible accessibilityLabel={`Session elapsed ${formatElapsed(elapsed)}`}>
-              <Text style={styles.timerLabel}>Session elapsed</Text>
-              <Text style={[styles.timerValue, type.tabular]}>{formatElapsed(elapsed)}</Text>
-            </View>
             <View accessible accessibilityLabel={`Since last moment ${sinceLast === null ? 'none' : formatElapsed(sinceLast)}`}>
               <Text style={styles.timerLabel}>Since last moment</Text>
               <Text style={[styles.timerValue, type.tabular]}>{sinceLast === null ? '—' : formatElapsed(sinceLast)}</Text>
-            </View>
-            <View style={styles.group}>
-              <Text style={styles.timerLabel}>Recording to</Text>
-              <Text style={styles.groupValue} numberOfLines={1}>
-                {groupName}
-              </Text>
             </View>
           </View>
           <MilestoneRow
             mode={state.rowMode}
             onCapture={milestone}
-            onApgar={() => setApgarOpen(true)}
             onShowAll={() => controller.showAllMilestones()}
           />
           <CaptureBar
             target={target}
             targetSave={target ? state.saveStates[target.id] : undefined}
             events={data.events}
-            groupName={groupName}
-            onMark={mark}
+            onResuscitate={() => milestone('RESUSCITATE')}
+            onApgar={() => setApgarOpen(true)}
             onSaveLabel={(id, text) => controller.labelMoment(id, text)}
             onDismiss={() => controller.dismissLabel()}
           />
@@ -185,8 +165,6 @@ const styles = StyleSheet.create({
   timers: { flexDirection: 'row', gap: space.xl, alignItems: 'flex-end' },
   timerLabel: { fontSize: 14, fontWeight: '700', color: colors.slate, textTransform: 'uppercase', letterSpacing: 0.5 },
   timerValue: { fontSize: 30, fontWeight: '700', color: colors.ink },
-  group: { flex: 1, alignItems: 'flex-end' },
-  groupValue: { fontSize: 20, fontWeight: '700', color: colors.ink },
   topBar: { flexDirection: 'row', gap: space.sm, alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' },
   emergency: { alignItems: 'flex-end' },
 });
