@@ -1,5 +1,5 @@
 import { ActiveSessionExistsError, SessionController, sanitizeLabel } from '@/domain/sessionController';
-import { effectiveElapsed, intervalsSincePrevious, liveStatus, sortByEffective } from '@/domain/timeline';
+import { effectiveElapsed, intervalsSincePrevious, liveStatus, sinceLastMoment, sortByEffective } from '@/domain/timeline';
 import { migrate } from '@/storage/db';
 import * as repo from '@/storage/repository';
 
@@ -275,6 +275,67 @@ describe('corrections', () => {
     expect(liveStatus(c.getState().data.moments).current!.milestoneCode).toBe('HEAD');
     c.setAccidental(head, true);
     expect(liveStatus(c.getState().data.moments).current!.milestoneCode).toBe('CROWN');
+  });
+
+  it('L08 flagging the newest milestone from the live panel drops its row and Time since falls back', async () => {
+    const c = await SessionController.start(deps());
+    clock.advance(10_000);
+    const crown = c.markMilestone('CROWN');
+    clock.advance(30_000);
+    const head = c.markMilestone('HEAD');
+    clock.advance(5_000);
+    const now = () => c.elapsedAt(clock.read());
+    expect(sinceLastMoment(c.getState().data.moments, now())).toBe(5_000);
+
+    c.setAccidental(head, true, 'pressed by mistake');
+    const moments = c.getState().data.moments;
+    const status = liveStatus(moments);
+    expect(status.history.map((m) => m.id)).toEqual([crown]);
+    expect(status.current!.id).toBe(crown);
+    expect(status.previous).toBeNull();
+    expect(status.sincePreviousMs).toBeNull();
+    // Time since now measures from Crown (40 s ago), not the flagged Head (5 s ago).
+    expect(sinceLastMoment(moments, now())).toBe(35_000);
+    // Never hard-deleted: the moment and its original snapshot are kept and flagged.
+    const kept = moments.find((m) => m.id === head)!;
+    expect(kept.flaggedAccidental).toBe(true);
+    expect(kept.originalElapsedMs).toBe(40_000);
+
+    const reloaded = await relaunch(c);
+    const after = reloaded.getState().data.moments;
+    expect(after.find((m) => m.id === head)!.flaggedAccidental).toBe(true);
+    expect(liveStatus(after).current!.id).toBe(crown);
+    expect(sinceLastMoment(after, reloaded.elapsedAt(clock.read()))).toBe(35_000);
+
+    reloaded.setAccidental(head, false);
+    expect(liveStatus(reloaded.getState().data.moments).current!.id).toBe(head);
+    expect(sinceLastMoment(reloaded.getState().data.moments, reloaded.elapsedAt(clock.read()))).toBe(5_000);
+  });
+
+  it('L08 flagging an earlier milestone removes only that row', async () => {
+    const c = await SessionController.start(deps());
+    const crown = c.markMilestone('CROWN');
+    clock.advance(10_000);
+    const head = c.markMilestone('HEAD');
+    clock.advance(10_000);
+    const body = c.markMilestone('BODY');
+    c.setAccidental(head, true);
+    const status = liveStatus(c.getState().data.moments);
+    expect(status.history.map((m) => m.id)).toEqual([crown, body]);
+    expect(status.current!.id).toBe(body);
+    expect(status.previous!.id).toBe(crown);
+    expect(status.sincePreviousMs).toBe(20_000);
+  });
+
+  it('L08 flagging every milestone empties the live panel and Time since', async () => {
+    const c = await SessionController.start(deps());
+    clock.advance(1_000);
+    const only = c.markMilestone('ROM');
+    c.setAccidental(only, true);
+    const moments = c.getState().data.moments;
+    expect(liveStatus(moments).current).toBeNull();
+    expect(sinceLastMoment(moments, c.elapsedAt(clock.read()))).toBeNull();
+    expect(moments).toHaveLength(1);
   });
 });
 
