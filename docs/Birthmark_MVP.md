@@ -185,6 +185,13 @@ Convert elapsed entries to wall time using the relevant clock anchor. When clock
 - Appendix: excluded captures, original values for corrected records, prior finishes/resumptions, and clock or recovery flags.
 - Footer: Times captured from this device. Manually entered, corrected, or estimated values are identified.
 
+### On-screen report
+
+The exported PDF follows the report structure above and is unchanged. The on-screen report shown after Finish is shorter:
+
+- Header: session date, start time, end time, and total elapsed duration. Start and End show the 24-hour time without a date; End shows In progress while the session is active. The session ID and the timezone and offsets are not shown in the header (the toolbar title still shows the short ID and revision).
+- Timeline: always in effective order. There is no capture-order toggle; the # column shows each moment's capture sequence.
+
 ### PDF export
 
 Generate the PDF locally from an escaped HTML template with expo-print [3]. Use an OS save/share flow through expo-sharing so the operator can choose a destination [4]. On iOS, use the available Files destination; on Android, test available file destinations and supply a platform file-save fallback if required. No automatic remote delivery occurs.

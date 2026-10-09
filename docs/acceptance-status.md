@@ -36,6 +36,10 @@ Prototype status against the scenario IDs in `docs/Birthmark_MVP.md`. "Automated
 | L09-L10 | Automated | "APGAR (L09, L10)" |
 | L11 | Automated | "reports an unavailable phone handler" |
 
+## On-screen report vs PDF
+
+The on-screen report is a trimmed view; the PDF (`src/report/renderHtml.ts`) is unchanged and still carries every section of the spec's report structure. On screen, the header shows Date, Start and End (time only, from `header.startTime` / `header.endTime`, tested in `tests/report.test.ts`), and Total elapsed. Session ID, Timezone, and the Show capture order toggle are removed.
+
 ## Verified in this pass
 
 - `npm test`: 92 tests pass.
@@ -44,7 +48,7 @@ Prototype status against the scenario IDs in `docs/Birthmark_MVP.md`. "Automated
 
 ## Not verified
 
-- iOS: this machine has no Xcode, so the Swift module and iOS build have not been compiled.
+- iOS: the Debug dev client builds with Xcode 27 (iOS 27 SDK) and launches on the iPhone 18 Pro simulator, using UIScene support from `expo-build-properties` (`ios.enableSceneSupport`). No physical iOS device or Release build has been run.
 - PDF output: the HTML is tested, but no generated PDF has been opened and reviewed.
 - Every physical-device, offline Release-build, and practice-tester scenario.
 - The October 2026 recording layout (Resuscitate and APGAR buttons, fitted milestone row, no Events button) has not been run on a device or emulator.

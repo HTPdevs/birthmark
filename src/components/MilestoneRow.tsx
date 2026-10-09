@@ -12,8 +12,7 @@ import {
 
 import type { RowMode } from '../domain/timeline';
 import { FULL_ROW, POST_FIRST_CRY_ROW, type RowMilestoneCode, milestoneLabel } from '../domain/types';
-import { milestoneRowLayout } from '../ui/milestoneLayout';
-import { colors, radius, space } from '../ui/theme';
+import { TOUCH, colors, radius, space } from '../ui/theme';
 
 type Props = {
   mode: RowMode;
@@ -22,10 +21,7 @@ type Props = {
 };
 
 /**
- * Milestone buttons sized so the whole row fits the viewport (First Cry is
- * visible without sliding). If fitting would drop a button below the touch
- * target, the row scrolls instead and shows a scroll cue. The row stays inside
- * a horizontal ScrollView either way: a drag goes to the ScrollView and cancels
+ * Horizontally swipeable milestone buttons. A drag scrolls the row and cancels
  * the press, so swiping never captures. Resuscitate and APGAR have their own
  * buttons on the recording screen, so every button here records a moment.
  */
@@ -60,13 +56,8 @@ export function MilestoneRow({ mode, onCapture, onShowAll }: Props) {
             accessibilityRole="button"
             accessibilityLabel={milestoneLabel(code)}
             accessibilityHint="Records this milestone now"
-            style={({ pressed }) => [styles.button, sized, pressed && styles.pressed]}>
-            <Text
-              style={styles.label}
-              numberOfLines={2}
-              adjustsFontSizeToFit
-              minimumFontScale={0.7}
-              maxFontSizeMultiplier={1.4}>
+            style={({ pressed }) => [styles.button, { width: buttonWidth }, pressed && styles.pressed]}>
+            <Text style={styles.label} numberOfLines={2} maxFontSizeMultiplier={1.4}>
               {milestoneLabel(code)}
             </Text>
           </Pressable>
@@ -112,8 +103,8 @@ const styles = StyleSheet.create({
   },
   allButton: { backgroundColor: colors.paper, borderWidth: 2, borderColor: colors.line },
   pressed: { opacity: 0.65 },
-  label: { color: colors.paper, fontSize: 17, fontWeight: '800', textAlign: 'center' },
-  allLabel: { color: colors.slate, fontSize: 15 },
+  label: { color: colors.paper, fontSize: 19, fontWeight: '800', textAlign: 'center' },
+  allLabel: { color: colors.slate, fontSize: 16 },
   cue: {
     position: 'absolute',
     right: 0,
