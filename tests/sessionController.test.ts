@@ -364,11 +364,11 @@ describe('corrections', () => {
     if (!crown.ok || !body.ok) throw new Error('manual milestones should be accepted');
     const data = c.getState().data;
     const r = buildReport(data, wallMs(clock.wall), c.elapsedAt(clock.read()));
-    expect(r.timeline.map((x) => [x.label, x.interval, x.flags])).toEqual([
-      ['ROM', '—', []],
-      ['Crown', '00:00:10', ['Manual']],
-      ['Head', '00:00:10', []],
-      ['Body: shoulder', '00:00:00', ['Manual']],
+    expect(r.timeline.map((x) => [x.label, x.entry, x.flags])).toEqual([
+      ['ROM', 'ROM', []],
+      ['Crown', 'ROM to Crown: 00:00:10', ['Manual']],
+      ['Head', 'Crown to Head: 00:00:10', []],
+      ['Body: shoulder', 'Head to Body: 00:00:00', ['Manual']],
     ]);
     expect(intervalsSincePrevious(data.moments).get(head)).toBe(10_000);
     // Body ties with Head on elapsed; the later capture sequence makes it the newest.

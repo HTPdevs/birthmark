@@ -1,5 +1,5 @@
 import type { ManualTimeInput } from '../domain/manualTime';
-import { deviceOffsetAtLocal, deviceOffsetAtWall, formatDateMDY, formatElapsed, formatTime24, parseDateMDY } from '../domain/time';
+import { deviceOffsetAtLocal, deviceOffsetAtWall, formatDate, formatElapsed, formatTime24, parseDateMDY, parseElapsed } from '../domain/time';
 
 /** What the manual time fields hold. The date is MM-DD-YYYY; the zone is the device's. */
 export type ManualTimeDraft = {
@@ -11,15 +11,32 @@ export type ManualTimeDraft = {
 
 type TzOffsetOf = (d: Date) => number;
 
-/** Fields prefilled from an instant, shown in the device time zone so save round-trips. */
-export function draftAt(wall: number, elapsedMs: number, tzOffsetOf?: TzOffsetOf): ManualTimeDraft {
+/**
+ * Fields prefilled from an instant, shown in the device time zone so save round-trips.
+ * The elapsed field counts from `origin` (the first recorded moment, see
+ * `recordingOrigin`), matching the report; stored elapsed still counts from Start.
+ */
+export function draftAt(wall: number, elapsedMs: number, tzOffsetOf?: TzOffsetOf, origin = 0): ManualTimeDraft {
   const offset = deviceOffsetAtWall(wall, tzOffsetOf);
-  return { mode: 'elapsed', elapsed: formatElapsed(elapsedMs), date: formatDateMDY(wall, offset), time: formatTime24(wall, offset) };
+  return {
+    mode: 'elapsed',
+    elapsed: formatElapsed(Math.max(0, elapsedMs - origin)),
+    date: formatDate(wall, offset),
+    time: formatTime24(wall, offset),
+  };
 }
 
-/** Converts the draft for resolveManualTime, reading date and time in the device time zone. */
-export function draftToInput(d: ManualTimeDraft, tzOffsetOf?: TzOffsetOf): ManualTimeInput | { error: string } {
-  if (d.mode === 'elapsed') return { mode: 'elapsed', elapsed: d.elapsed };
+/**
+ * Converts the draft for resolveManualTime, reading date and time in the device
+ * time zone. An elapsed entry is relative to `origin` and is shifted back to
+ * session-start elapsed here, so the domain never sees the display origin.
+ */
+export function draftToInput(d: ManualTimeDraft, tzOffsetOf?: TzOffsetOf, origin = 0): ManualTimeInput | { error: string } {
+  if (d.mode === 'elapsed') {
+    const since = parseElapsed(d.elapsed);
+    // Unparseable text goes through unchanged so resolveManualTime reports it.
+    return { mode: 'elapsed', elapsed: since === null ? d.elapsed : formatElapsed(since + origin) };
+  }
   const date = parseDateMDY(d.date);
   if (date === null) return { error: 'Enter the date as MM-DD-YYYY.' };
   const offsetMinutes = deviceOffsetAtLocal(date, d.time.trim(), tzOffsetOf);

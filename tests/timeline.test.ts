@@ -1,5 +1,15 @@
 import { CALL_FALLBACK_MESSAGE, type PhoneAdapter, requestEmergencyCall } from '@/domain/emergency';
-import { deriveRowMode, liveStatus, momentName, sinceLastHeading, sinceLastMoment, sortByEffective } from '@/domain/timeline';
+import {
+  deriveRowMode,
+  liveStatus,
+  momentName,
+  recordedTotal,
+  recordingOrigin,
+  sinceLastHeading,
+  sinceLastMoment,
+  sinceOrigin,
+  sortByEffective,
+} from '@/domain/timeline';
 import {
   FULL_ROW,
   MILESTONES,
@@ -73,6 +83,45 @@ describe('moment names', () => {
 
   it('names the finish boundary Finish time', () => {
     expect(momentName(moment({ elapsed: 0, kind: 'finish', momentNumber: null }), [])).toBe('Finish time');
+  });
+});
+
+describe('recording origin', () => {
+  it('is the first recorded moment, not session start: Crown first means Crown is the origin', () => {
+    const crown = moment({ elapsed: 90_000, kind: 'milestone', milestoneCode: 'CROWN' });
+    const head = moment({ elapsed: 155_000, kind: 'milestone', milestoneCode: 'HEAD' });
+    expect(recordingOrigin([head, crown])).toBe(90_000);
+    expect(sinceOrigin(elapsedMs(155_000), recordingOrigin([crown, head]))).toBe(65_000);
+    expect(recordedTotal(elapsedMs(170_000), elapsedMs(90_000))).toBe(80_000);
+  });
+
+  it('ignores accidental taps and system boundaries', () => {
+    const tap = moment({ elapsed: 5000, flaggedAccidental: true });
+    const start = moment({ elapsed: 1000, kind: 'event_start', momentNumber: null });
+    const fin = moment({ elapsed: 2000, kind: 'finish', momentNumber: null });
+    const rom = moment({ elapsed: 30_000, kind: 'milestone', milestoneCode: 'ROM' });
+    expect(recordingOrigin([tap, start, fin, rom])).toBe(30_000);
+  });
+
+  it('follows a corrected or manually added earlier time', () => {
+    const crown = moment({ elapsed: 40_000, kind: 'milestone', milestoneCode: 'CROWN' });
+    const corrected = { ...crown, effectiveElapsedMs: elapsedMs(25_000), source: 'corrected' as const };
+    expect(recordingOrigin([corrected])).toBe(25_000);
+    const manual = { ...moment({ elapsed: 0 }), snapshot: null, originalElapsedMs: null, effectiveElapsedMs: elapsedMs(10_000), source: 'manual' as const };
+    expect(recordingOrigin([corrected, manual])).toBe(10_000);
+  });
+
+  it('is null with no recorded moment, so there is no total', () => {
+    expect(recordingOrigin([])).toBeNull();
+    expect(recordingOrigin([moment({ elapsed: 0, kind: 'finish', momentNumber: null })])).toBeNull();
+    expect(recordedTotal(elapsedMs(60_000), null)).toBeNull();
+    expect(recordedTotal(null, elapsedMs(1000))).toBeNull();
+  });
+
+  it('clamps values before the origin to zero', () => {
+    expect(sinceOrigin(elapsedMs(1000), elapsedMs(5000))).toBe(0);
+    expect(sinceOrigin(elapsedMs(1000), null)).toBe(1000);
+    expect(recordedTotal(elapsedMs(1000), elapsedMs(5000))).toBe(0);
   });
 });
 

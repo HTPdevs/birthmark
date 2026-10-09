@@ -99,9 +99,15 @@ function Report({ controller }: { controller: SessionController }) {
   return (
     <SafeAreaView style={styles.screen} edges={['left', 'right', 'top', 'bottom']}>
       <View style={styles.toolbar}>
-        <Button label="Home" variant="ghost" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
-        <Text style={styles.title} numberOfLines={1}>
-          Report {report.header.shortId} {'·'} r{report.header.revision}
+        <Button
+          label="Home"
+          icon="home"
+          iconOnly
+          variant="ghost"
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+        />
+        <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>
+          {report.header.title}
         </Text>
         <SaveStatus queue={state.queue} onRetry={() => controller.retry()} />
         {isActive ? <Button label="Back to recording" variant="primary" onPress={() => router.replace('/record')} /> : null}
@@ -110,12 +116,6 @@ function Report({ controller }: { controller: SessionController }) {
 
       <ScrollView contentContainerStyle={styles.body}>
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <View style={styles.meta}>
-          <Meta k="Date" v={report.header.sessionDate} />
-          <Meta k="Start time" v={report.header.startTime} />
-          <Meta k="End time" v={report.header.endTime} />
-        </View>
-
         <View style={styles.actions}>
           <Button label="APGAR" onPress={() => setApgarOpen(true)} />
           <Button label="Add to timeline" onPress={() => setAddOpen(true)} />
@@ -132,7 +132,7 @@ function Report({ controller }: { controller: SessionController }) {
 
         <Text style={styles.h2}>Timeline</Text>
         <Text style={styles.hint}>Tap a record to edit entry.</Text>
-        <TableHead cols={['#', 'Elapsed time', 'Time (24h)', 'Time since last', 'Notes']} />
+        <TableHead cols={['#', 'Entry', 'Time (24h)']} />
         {screenTimeline(report).map((r) => (
           <TimelineRowView key={r.key} row={r} onPress={r.momentId ? () => setEditing(r.momentId) : undefined} />
         ))}
@@ -145,6 +145,17 @@ function Report({ controller }: { controller: SessionController }) {
             <Text style={[styles.td, styles.w3]}>{a.score}</Text>
           </View>
         ))}
+
+        <Text style={styles.h2}>Notes</Text>
+        {report.notes.length ? (
+          report.notes.map((n, i) => (
+            <Text key={i} style={[styles.note, type.tabular]}>
+              {n}
+            </Text>
+          ))
+        ) : (
+          <Text style={styles.hint}>No notes.</Text>
+        )}
 
         <Text style={styles.footer}>{report.footer}</Text>
       </ScrollView>
@@ -210,17 +221,8 @@ function Report({ controller }: { controller: SessionController }) {
   );
 }
 
-function Meta({ k, v }: { k: string; v: string }) {
-  return (
-    <View style={styles.metaItem}>
-      <Text style={styles.metaKey}>{k}</Text>
-      <Text style={[styles.metaVal, type.tabular]}>{v}</Text>
-    </View>
-  );
-}
-
-// #, Elapsed time, Time (24h), Time since last, Notes
-const WIDTHS = [0.5, 3, 2, 1.7, 2.5];
+// #, Entry, Time (24h)
+const WIDTHS = [0.5, 5, 2];
 
 function TableHead({ cols }: { cols: string[] }) {
   return (
@@ -235,13 +237,13 @@ function TableHead({ cols }: { cols: string[] }) {
 }
 
 function TimelineRowView({ row, onPress }: { row: ScreenTimelineRow; onPress?: () => void }) {
-  const cells = [String(row.index), row.span, row.time, row.elapsed, row.notes];
+  const cells = [String(row.index), row.entry, row.time];
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={`${row.span}, ${row.time}, time since last ${row.elapsed}${row.notes ? `, ${row.notes}` : ''}`}
+      accessibilityLabel={`${row.index}, ${row.entry}, ${row.time}`}
       style={({ pressed }) => [styles.tr, pressed && styles.pressed]}>
       {cells.map((c, i) => (
         <Text key={i} style={[styles.td, type.tabular, { flex: WIDTHS[i] }, row.isSystem && styles.system]}>
@@ -252,9 +254,9 @@ function TimelineRowView({ row, onPress }: { row: ScreenTimelineRow; onPress?: (
   );
 }
 
-/** Summary line under the timeline: label in the Elapsed time column, value in the Time since last column. */
+/** Summary line closing the timeline, in the same "Name: HH:MM:SS" form as the entries. */
 function TotalRow({ value }: { value: string }) {
-  const cells = ['', 'Total time', '', value, ''];
+  const cells = ['', `Total time: ${value}`, ''];
   return (
     <View style={[styles.tr, styles.total]} accessible accessibilityLabel={`Total time ${value}`}>
       {cells.map((c, i) => (
@@ -281,10 +283,6 @@ const styles = StyleSheet.create({
   title: { flex: 1, fontSize: 22, fontWeight: '800', color: colors.ink },
   body: { padding: space.lg, gap: space.xs, paddingBottom: space.xl * 2 },
   error: { color: colors.danger, fontSize: 16, fontWeight: '700' },
-  meta: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space.lg, marginBottom: space.sm },
-  metaItem: { minWidth: 180, alignItems: 'center' },
-  metaKey: { fontSize: 13, color: colors.slate, fontWeight: '700' },
-  metaVal: { fontSize: 16, color: colors.ink },
   actions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space.sm, marginBottom: space.md },
   h2: { fontSize: 20, fontWeight: '800', color: colors.ink, marginTop: space.lg },
   hint: { fontSize: 15, color: colors.slate },
@@ -293,6 +291,7 @@ const styles = StyleSheet.create({
   th: { fontSize: 16, fontWeight: '700', color: colors.slate },
   td: { fontSize: 18, color: colors.ink },
   w3: { flex: 3 },
+  note: { fontSize: 18, color: colors.ink, paddingVertical: space.xs },
   system: { color: colors.slate, fontStyle: 'italic' },
   pressed: { backgroundColor: colors.mist },
   total: { borderTopWidth: 2, borderTopColor: colors.line, borderBottomWidth: 0 },

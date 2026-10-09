@@ -28,9 +28,9 @@ Prototype status against the scenario IDs in `docs/Birthmark_MVP.md`. "Automated
 | R10 | Device | Five-minute comparison against an independent timer |
 | L01-L02 | Device | Landscape is locked (both directions via `expo-screen-orientation`). Distance reading needs testers |
 | L03 | Automated | `tests/time.test.ts` noon/midnight. The toggle is display-only |
-| L04 | Automated (order, width) / device | `tests/timeline.test.ts` exact order, Resuscitate and APGAR kept out of the rows; `tests/milestoneLayout.test.ts` all buttons fit the row width or fall back to scrolling. Label fit on real screens needs a device check |
+| L04 | Automated (order, width) / device | `tests/timeline.test.ts` exact order, Resuscitate and APGAR kept out of the capture codes; `tests/milestoneLayout.test.ts` "milestone row items (L04, L06)" row contents and all buttons fit the row width or fall back to scrolling. The buttons stretch to fill the left column's height. Label fit and the stretched height on real screens need a device check |
 | L05 | Automated | `tests/timeline.test.ts` "Since Crown" |
-| L06 | Automated | "milestone row (L06)" |
+| L06 | Automated / device | "milestone row (L06)" (controller); `tests/milestoneLayout.test.ts` "L06 after First Cry" row is Separation Gush, Placenta, APGAR (opens the editor, records no moment), Go back (restores the full row). Button wiring needs a device check |
 | L07 | Automated | `tests/timeline.test.ts` "opens tel:911 exactly once" |
 | L08 | Automated | "L08 flagging the newest milestone" |
 | L09-L10 | Automated | "APGAR (L09, L10)" |
@@ -38,7 +38,18 @@ Prototype status against the scenario IDs in `docs/Birthmark_MVP.md`. "Automated
 
 ## On-screen report vs PDF
 
-The on-screen report is a trimmed view; the PDF (`src/report/renderHtml.ts`) is unchanged and still carries every section of the spec's report structure. On screen, the header shows Date, Start and End (time only, from `header.startTime` / `header.endTime`, tested in `tests/report.test.ts`). Session ID, Timezone, and the Show capture order toggle are removed. The timeline table has columns #, Label, Time (24h), Time since last, and Flags (Elapsed and Group are removed), and ends with a Total time line showing `header.totalElapsed`. The Events section and the Appendix (excluded captures, original values, finishes and resumptions, clock and recovery flags, change history) are not on screen; they remain in the PDF. As a result, a capture flagged as an accidental tap has no on-screen place to be reopened and unflagged. A08 is covered at the controller level and is unaffected.
+Both views come from one `buildReport()` model (`src/report/reportModel.ts`) and share these rules:
+
+- Recorded time starts at the first recorded moment, not at Start. The origin is `recordingOrigin()` in `src/domain/timeline.ts`: the smallest effective elapsed among captures and milestones not flagged accidental, so a manual or corrected earlier moment moves it. This is display only; the clock anchor, the database, and every stored elapsed value still count from session start.
+- Total time is the finish (or now, while active) minus the origin, and a dash before any moment is recorded. History shows the same value per session, from `firstMomentElapsedMs` that `listSessions()` computes in SQL with the same rules.
+- Dates show as MM-DD-YYYY everywhere (`formatDate`). The PDF file name (`reportFileName`) stays year first so files sort by date.
+- Timeline entries: the first recorded moment is its bare name ("ROM"); each later one carries the interval from the previous one ("ROM to Crown: 00:03:12"). Accidental taps are left out and do not split an interval. There is no Start row, no "Start to" span, and no finish or resume row; finishes and resumptions (with the resume gap) are listed only in the PDF appendix.
+- The Edit and Add to timeline sheets show and accept elapsed time from the same origin (`draftAt` / `draftToInput` with `recordingOrigin`); stored elapsed still counts from Start.
+- Notes is its own section after APGAR assessments: one line per timeline entry with a milestone label or flags ("Crown: slow, Manual"), or "No notes."
+
+On screen: the title is "Report for MM-DD-YYYY" and there is no meta row (Date moved into the title; start and end time were removed). Home is an icon-only button (the label "Home" stays as the accessibility label), on History too. The timeline table has columns #, Entry, Time (24h), numbered from 1, rows still tap to edit, and it ends with a "Total time: HH:MM:SS" line. Session ID, Timezone, Events, and the Appendix are not on screen. As a result, a capture flagged as an accidental tap has no on-screen place to be reopened and unflagged. A08 is covered at the controller level and is unaffected.
+
+PDF (`src/report/renderHtml.ts`): heading "Report for MM-DD-YYYY"; metadata keeps session ID, revision, generated time, timezone, and offsets (no start or finish time; Total time appears once, at the end of the timeline). The timeline columns are #, Entry, Time (24h), Elapsed, Group, with # as the capture sequence and Elapsed counted from the origin (rows before the origin, such as an event started earlier, show a dash); the table ends with a Total time row unless it is empty. Notes follows APGAR. The appendix (excluded captures with their labels and flags, original values, finishes and resumptions, clock and recovery flags, change history) is unchanged in content, and its elapsed values count from session start, which a line under the Appendix heading states. All dynamic values are escaped (tested in `tests/report.test.ts`).
 
 ## Verified in this pass
 

@@ -1,6 +1,7 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { type ReactNode, useRef, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import {
   EMERGENCY_NUMBER,
@@ -10,17 +11,87 @@ import {
 } from '../domain/emergency';
 import { TEST_CALL_NUMBER, phoneAdapter } from '../platform/phone';
 import { appStore } from '../state/store';
-import { Button } from '../ui/Button';
+import type { IconName } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Sheet } from '../ui/Sheet';
-import { colors, space } from '../ui/theme';
+import { TOUCH, colors, radius, space } from '../ui/theme';
+
+type TileVariant = 'warning' | 'emergency';
+
+/**
+ * Large action with the icon stacked over the label, for the narrow right column
+ * where two actions share one row (Resuscitate and Emergency). A side-by-side
+ * icon and label at 22pt does not fit a ~115pt slot on a landscape phone; stacked,
+ * the label gets the full slot width and shrinks to fit rather than wrapping
+ * mid-word. Fills its parent's height so both tiles in a row are equal.
+ */
+export function ActionTile({
+  label,
+  icon,
+  variant,
+  onPress,
+  accessibilityHint,
+  testID,
+  style,
+  children,
+}: {
+  label: string;
+  icon?: IconName;
+  variant: TileVariant;
+  onPress: () => void;
+  accessibilityHint: string;
+  testID?: string;
+  style?: StyleProp<ViewStyle>;
+  /** Extra small line under the label (test-build notice). */
+  children?: ReactNode;
+}) {
+  const fg = variant === 'warning' ? colors.paper : colors.onAccent;
+  return (
+    <Pressable
+      testID={testID}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={accessibilityHint}
+      style={({ pressed }) => [tile.base, tile[variant], pressed && tile.pressed, style]}>
+      {icon ? <Ionicons name={icon} size={26} color={fg} accessible={false} /> : null}
+      <Text
+        style={[tile.label, { color: fg }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+        maxFontSizeMultiplier={1.3}>
+        {label}
+      </Text>
+      {children}
+    </Pressable>
+  );
+}
+
+const tile = StyleSheet.create({
+  base: {
+    flex: 1,
+    minHeight: 72,
+    minWidth: TOUCH,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    paddingHorizontal: space.xs,
+    paddingVertical: space.sm,
+  },
+  warning: { backgroundColor: colors.warning },
+  emergency: { backgroundColor: colors.accent },
+  pressed: { opacity: 0.7 },
+  label: { fontSize: 18, fontWeight: '800', textAlign: 'center', alignSelf: 'stretch' },
+});
 
 /**
  * Protected Emergency action. No or dismissal changes nothing. Yes requests the
  * phone handoff and finishes the active session at the same time; the call never
  * waits on the finish. It never records a moment and never claims a call connected.
  */
-export function EmergencyControl() {
+export function EmergencyControl({ style }: { style?: StyleProp<ViewStyle> }) {
   const [confirming, setConfirming] = useState(false);
   const [notices, setNotices] = useState<string[]>([]);
   const inFlight = useRef(false);
@@ -62,16 +133,22 @@ export function EmergencyControl() {
   };
 
   return (
-    <View>
-      {TEST_CALL_NUMBER ? <Text style={styles.test}>TEST BUILD: dials {TEST_CALL_NUMBER}</Text> : null}
-      <Button
+    <View style={[styles.wrap, style]}>
+      {/* "call", not "warning": the button hands off to the phone dialer, and the
+          warning glyph would blur it with the rust Resuscitate tile beside it. */}
+      <ActionTile
         label="Emergency"
+        icon="call"
         variant="emergency"
-        large
         onPress={() => setConfirming(true)}
         accessibilityHint={`Asks before calling ${number} and ending the session`}
-        testID="emergency"
-      />
+        testID="emergency">
+        {TEST_CALL_NUMBER ? (
+          <Text style={styles.test} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+            TEST: dials {TEST_CALL_NUMBER}
+          </Text>
+        ) : null}
+      </ActionTile>
       <ConfirmDialog
         visible={confirming}
         title="Are you sure?"
@@ -95,7 +172,9 @@ export function EmergencyControl() {
 }
 
 const styles = StyleSheet.create({
-  test: { color: colors.danger, fontWeight: '800', fontSize: 13, textAlign: 'right', marginBottom: space.xs },
+  wrap: { flexDirection: 'row' },
+  // Inside the coral tile, so the tile stays the same height as Resuscitate.
+  test: { color: colors.onAccent, fontWeight: '800', fontSize: 12, textAlign: 'center', alignSelf: 'stretch' },
   notice: { fontSize: 22, fontWeight: '800', color: colors.ink },
   sub: { fontSize: 16, color: colors.slate },
 });

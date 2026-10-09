@@ -22,12 +22,17 @@ ${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('\n
 </table>`;
 }
 
-const timelineRow = (r: TimelineRow) => [
+const systemOr = (r: TimelineRow, text: string) => (r.isSystem ? `<span class="system">${e(text)}</span>` : e(text));
+
+/** Main timeline: the Entry text carries the interval; labels and flags go to Notes. */
+const timelineRow = (r: TimelineRow) => [e(r.sequence), systemOr(r, r.entry), e(r.time), e(r.elapsed), e(r.group)];
+
+/** Appendix rows keep the full label and flags, since excluded captures have no Notes line. */
+const excludedRow = (r: TimelineRow) => [
   e(r.sequence),
-  r.isSystem ? `<span class="system">${e(r.label)}</span>` : e(r.label),
+  systemOr(r, r.label),
   e(r.time),
   e(r.elapsed),
-  e(r.interval),
   e(r.group),
   e(r.flags.join(', ')),
 ];
@@ -60,26 +65,31 @@ export function renderReportHtml(r: ReportModel): string {
   .system { color: ${colors.slate}; font-style: italic; }
   .empty { color: ${colors.slate}; font-style: italic; }
   .notice { color: ${colors.slate}; font-size: 10pt; }
+  .notes { margin: 0; padding-left: 14pt; }
   footer { margin-top: 16pt; color: ${colors.slate}; font-size: 10pt; border-top: 1px solid ${colors.line}; padding-top: 4pt; }
 </style>
 </head>
 <body>
-<h1>Birthmark session report</h1>
+<h1>${e(`Report for ${h.sessionDate}`)}</h1>
 ${h.inProgress ? '<p class="notice">Session in progress at generation time.</p>' : ''}
 <dl class="meta">
   <dt>Session</dt><dd>${e(h.shortId)} (${e(h.sessionId)})</dd>
   <dt>Report revision</dt><dd>r${e(h.revision)}</dd>
-  <dt>Date</dt><dd>${e(h.sessionDate)}</dd>
   <dt>Generated</dt><dd>${e(h.generatedAt)}</dd>
-  <dt>Start</dt><dd>${e(h.start)}</dd>
-  <dt>End</dt><dd>${e(h.end)}</dd>
   <dt>Timezone</dt><dd>${e(h.timezone)}</dd>
   <dt>Offsets</dt><dd>${e(h.offsets)}</dd>
-  <dt>Total elapsed</dt><dd>${e(h.totalElapsed)}</dd>
 </dl>
 
 <h2>Timeline</h2>
-${table(['#', 'Label', 'Time (24h)', 'Elapsed', 'Since previous', 'Group', 'Flags'], r.timeline.map(timelineRow), 'No records.')}
+<p class="notice">Elapsed counts from the first recorded moment.</p>
+${table(
+  ['#', 'Entry', 'Time (24h)', 'Elapsed', 'Group'],
+  // No Total row on an empty timeline, so the empty state still shows.
+  r.timeline.length
+    ? [...r.timeline.map(timelineRow), ['', '<strong>Total time</strong>', '', `<strong>${e(h.totalElapsed)}</strong>`, '']]
+    : [],
+  'No records.',
+)}
 
 <h2>Events</h2>
 ${table(
@@ -92,9 +102,13 @@ ${table(
 <p class="notice">Operator-entered scores. No assessment occurrence time is recorded.</p>
 ${table(['Assessment', 'Score (0-10)'], r.apgar.map((x) => [e(x.label), e(x.score)]), 'No assessments.')}
 
+<h2>Notes</h2>
+${r.notes.length ? `<ul class="notes">\n${r.notes.map((n) => `<li>${e(n)}</li>`).join('\n')}\n</ul>` : '<p class="empty">No notes.</p>'}
+
 <h2>Appendix</h2>
+<p class="notice">Appendix elapsed values count from session start, not from the first recorded moment.</p>
 <h3>Excluded captures</h3>
-${table(['#', 'Label', 'Time (24h)', 'Elapsed', 'Since previous', 'Group', 'Flags'], r.appendix.excluded.map(timelineRow), 'None.')}
+${table(['#', 'Label', 'Time (24h)', 'Elapsed', 'Group', 'Flags'], r.appendix.excluded.map(excludedRow), 'None.')}
 <h3>Original values for corrected or manual records</h3>
 ${table(
   ['Record', 'Original', 'Effective', 'Source'],

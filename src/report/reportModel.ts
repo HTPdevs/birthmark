@@ -7,9 +7,11 @@ import {
   eventEnd,
   eventName,
   eventStart,
-  intervalsSincePrevious,
   isIncluded,
   momentName,
+  recordedTotal,
+  recordingOrigin,
+  sinceOrigin,
   sortByEffective,
 } from '../domain/timeline';
 import {
@@ -25,30 +27,31 @@ import {
 export type TimelineRow = {
   momentId: string;
   sequence: number;
+  /** Full record name, a milestone's label included ("Head: Face up"). */
   label: string;
+  /**
+   * Entry cell. The first recorded moment is its bare name ("ROM"); each later
+   * one carries the interval from the previous one ("ROM to Crown: 00:03:12").
+   * System rows (event boundaries) show their label.
+   */
+  entry: string;
   time: string;
+  /** Elapsed from the recording origin in the timeline; from session start in the appendix. */
   elapsed: string;
-  interval: string;
   group: string;
   flags: string[];
   isSystem: boolean;
-  /** On-screen "Elapsed time" cell: "Crown to Head", "Start to Crown", or the label for system rows. */
-  span: string;
-  /** Time from the previous included record (or session start for the first one) to this one. */
-  spanElapsed: string;
-  /** On-screen "Notes" cell: a milestone's label, then its flags. */
+  /** A milestone's label, then the flags. Shown in the Notes section. */
   notes: string[];
 };
 
-/** One row of the on-screen timeline table, which opens with the session start. */
+/** One row of the on-screen timeline table (#, Entry, Time). */
 export type ScreenTimelineRow = {
   key: string;
   index: number;
-  span: string;
+  entry: string;
   time: string;
-  elapsed: string;
-  notes: string;
-  /** Null for the Start time row, which is not a record and cannot be edited. */
+  /** Null for system rows, which are not editable records. */
   momentId: string | null;
   isSystem: boolean;
 };
@@ -57,21 +60,22 @@ export type ReportModel = {
   header: {
     sessionId: string;
     shortId: string;
+    /** MM-DD-YYYY of the session start. */
     sessionDate: string;
-    start: string;
-    end: string;
-    /** Start clock time only (24h, no date), for the on-screen report. */
-    startTime: string;
-    /** End clock time only (24h, no date), or "In progress", for the on-screen report. */
-    endTime: string;
+    /** On-screen title: "Report for MM-DD-YYYY". */
+    title: string;
     timezone: string;
     offsets: string;
+    /** Finish (or now while active) minus the recording origin; a dash before any recorded moment. */
     totalElapsed: string;
     revision: number;
     generatedAt: string;
     inProgress: boolean;
   };
+  /** Records and event boundaries. Finishes and resumptions live in appendix.finishes. */
   timeline: TimelineRow[];
+  /** One line per timeline entry with notes: "Crown: label, Manual". */
+  notes: string[];
   events: { label: string; start: string; end: string; duration: string; autoEnded: boolean }[];
   apgar: { label: string; score: string }[];
   appendix: {
@@ -126,7 +130,7 @@ export function buildReport(data: SessionData, generatedAt: WallMs, nowElapsed: 
   const { session } = data;
   const off0 = session.startedSnapshot.utcOffsetMinutes;
   const sessionDate = formatDate(session.startedSnapshot.wallEpochMs, off0);
-  const intervals = intervalsSincePrevious(data.moments);
+  const origin = recordingOrigin(data.moments);
   const flagsByMoment = new Map<string, string[]>();
   for (const f of data.flags) {
     if (!f.momentId) continue;
@@ -140,7 +144,7 @@ export function buildReport(data: SessionData, generatedAt: WallMs, nowElapsed: 
   };
 
   const sorted = sortByEffective(data.moments);
-  // Span names drop a milestone's label (it goes in Notes) so "Crown to Head" stays short.
+  // Entry names drop a milestone's label (it goes in Notes) so "Crown to Head" stays short.
   const spanName = (m: Moment) =>
     m.kind === 'milestone' && m.milestoneCode ? milestoneLabel(m.milestoneCode) : momentName(m, data.events);
   const previousIncluded = new Map<string, Moment | null>();
@@ -150,7 +154,8 @@ export function buildReport(data: SessionData, generatedAt: WallMs, nowElapsed: 
     previousIncluded.set(m.id, lastSeen);
     lastSeen = m;
   }
-  const toRow = (m: Moment): TimelineRow => {
+  /** `base` is what Elapsed counts from: the recording origin, or null for session start. */
+  const toRow = (m: Moment, base: ElapsedMs | null): TimelineRow => {
     const flags: string[] = [];
     if (m.source === 'manual') flags.push('Manual');
     if (m.source === 'corrected') flags.push('Corrected');
@@ -158,7 +163,6 @@ export function buildReport(data: SessionData, generatedAt: WallMs, nowElapsed: 
     if (m.snapshot?.quality === 'fallback') flags.push('Fallback clock');
     if (m.flaggedAccidental) flags.push('Accidental tap');
     flags.push(...(flagsByMoment.get(m.id) ?? []));
-    const interval = intervals.get(m.id);
     const label = momentName(m, data.events);
     const included = isIncluded(m);
     const prev = previousIncluded.get(m.id) ?? null;
@@ -168,34 +172,32 @@ export function buildReport(data: SessionData, generatedAt: WallMs, nowElapsed: 
       sequence: m.captureSequence,
       label,
       time: formatTimestamp(effectiveWall(m), effectiveOffset(m, off0), sessionDate, off0),
-      elapsed: formatElapsed(effectiveElapsed(m)),
-      interval: interval == null ? DASH : formatElapsed(interval),
+      // A row before the origin (an event started before the first record) has no recorded time yet.
+      elapsed: base !== null && effectiveElapsed(m) < base ? DASH : formatElapsed(sinceOrigin(effectiveElapsed(m), base)),
       group: groupName(m),
       flags,
       isSystem: !(m.kind === 'capture' || m.kind === 'milestone'),
-      span: !included ? label : `${prev ? spanName(prev) : 'Start'} to ${spanName(m)}`,
-      spanElapsed: !included
-        ? DASH
-        : formatElapsed(prev ? effectiveElapsed(m) - effectiveElapsed(prev) : effectiveElapsed(m)),
+      entry: !included
+        ? label
+        : prev
+          ? `${spanName(prev)} to ${spanName(m)}: ${formatElapsed(effectiveElapsed(m) - effectiveElapsed(prev))}`
+          : spanName(m),
       notes,
     };
   };
 
-  const timeline = sorted.filter((m) => !(m.kind === 'capture' || m.kind === 'milestone') || isIncluded(m)).map(toRow);
-  const excluded = sorted.filter((m) => m.flaggedAccidental).map(toRow);
-
-  // A gap between a finish and its resumption is labelled in the timeline.
-  for (const row of timeline) {
+  const isFinishBoundary = (m: Moment) => m.kind === 'finish' || m.kind === 'resume';
+  const timeline = sorted
+    .filter((m) => !isFinishBoundary(m) && (!(m.kind === 'capture' || m.kind === 'milestone') || isIncluded(m)))
+    .map((m) => toRow(m, origin));
+  const excluded = sorted.filter((m) => m.flaggedAccidental).map((m) => toRow(m, null));
+  const notes = timeline.flatMap((row) => {
+    if (!row.notes.length) return [];
     const m = data.moments.find((x) => x.id === row.momentId);
-    if (m?.kind !== 'resume') continue;
-    const priorFinish = sorted.filter((x) => x.kind === 'finish' && effectiveElapsed(x) <= effectiveElapsed(m)).pop();
-    if (!priorFinish) continue;
-    row.label = `Resumed after finish (gap ${formatElapsed(effectiveElapsed(m) - effectiveElapsed(priorFinish))})`;
-    row.span = row.label;
-  }
+    return [`${m ? spanName(m) : row.label}: ${row.notes.join(', ')}`];
+  });
 
-  const end = session.finishSnapshot;
-  const totalElapsed = session.finishElapsedMs ?? nowElapsed;
+  const total = recordedTotal(session.finishElapsedMs ?? nowElapsed, origin);
   const offsets = new Set<number>([off0]);
   data.moments.forEach((m) => m.snapshot && offsets.add(m.snapshot.utcOffsetMinutes));
 
@@ -229,11 +231,23 @@ export function buildReport(data: SessionData, generatedAt: WallMs, nowElapsed: 
       source: m.source === 'manual' ? 'Manual' : 'Corrected',
     }));
 
-  const finishes = sortByEffective(data.moments.filter((m) => m.kind === 'finish' || m.kind === 'resume')).map((m) => ({
-    label: m.kind === 'finish' ? 'Finished' : 'Resumed',
-    time: formatTimestamp(effectiveWall(m), effectiveOffset(m, off0), sessionDate, off0),
-    elapsed: formatElapsed(effectiveElapsed(m)),
-  }));
+  const finishes = sortByEffective(data.moments.filter(isFinishBoundary)).map((m) => {
+    // A resumption carries the gap since the finish before it.
+    const priorFinish =
+      m.kind === 'resume'
+        ? sorted.filter((x) => x.kind === 'finish' && effectiveElapsed(x) <= effectiveElapsed(m)).pop()
+        : undefined;
+    return {
+      label:
+        m.kind === 'finish'
+          ? 'Finished'
+          : priorFinish
+            ? `Resumed (gap ${formatElapsed(effectiveElapsed(m) - effectiveElapsed(priorFinish))})`
+            : 'Resumed',
+      time: formatTimestamp(effectiveWall(m), effectiveOffset(m, off0), sessionDate, off0),
+      elapsed: formatElapsed(effectiveElapsed(m)),
+    };
+  });
 
   const flags = data.flags.map((f) => ({
     type: FLAG_LABELS[f.type] ?? f.type,
@@ -291,18 +305,16 @@ export function buildReport(data: SessionData, generatedAt: WallMs, nowElapsed: 
       sessionId: session.id,
       shortId: session.shortId,
       sessionDate,
-      start: formatDateTime(session.startedSnapshot.wallEpochMs, off0),
-      end: end ? formatDateTime(end.wallEpochMs, end.utcOffsetMinutes) : 'In progress',
-      startTime: formatTime24(session.startedSnapshot.wallEpochMs, off0),
-      endTime: end ? formatTime24(end.wallEpochMs, end.utcOffsetMinutes) : 'In progress',
+      title: `Report for ${sessionDate}`,
       timezone: session.startedSnapshot.timezoneId,
       offsets: [...offsets].map(formatOffset).join(', '),
-      totalElapsed: totalElapsed === null ? DASH : formatElapsed(totalElapsed),
+      totalElapsed: total === null ? DASH : formatElapsed(total),
       revision: session.revision,
       generatedAt: formatDateTime(generatedAt, off0),
       inProgress: session.status === 'active',
     },
     timeline,
+    notes,
     events,
     apgar,
     appendix: { excluded, corrected, finishes, flags },
@@ -312,26 +324,21 @@ export function buildReport(data: SessionData, generatedAt: WallMs, nowElapsed: 
 }
 
 /**
- * Rows for the on-screen timeline table: a Start time row, then every timeline
- * row numbered from 2. The PDF keeps capture sequence numbers instead.
+ * Rows for the on-screen timeline table, numbered from 1. The PDF keeps
+ * capture sequence numbers instead.
  */
 export function screenTimeline(r: ReportModel): ScreenTimelineRow[] {
-  return [
-    { key: 'start', index: 1, span: 'Start time', time: r.header.startTime, elapsed: DASH, notes: '', momentId: null, isSystem: true },
-    ...r.timeline.map((row, i) => ({
-      key: row.momentId,
-      index: i + 2,
-      span: row.span,
-      time: row.time,
-      elapsed: row.spanElapsed,
-      notes: row.notes.join(', '),
-      momentId: row.isSystem ? null : row.momentId,
-      isSystem: row.isSystem,
-    })),
-  ];
+  return r.timeline.map((row, i) => ({
+    key: row.momentId,
+    index: i + 1,
+    entry: row.entry,
+    time: row.time,
+    momentId: row.isSystem ? null : row.momentId,
+    isSystem: row.isSystem,
+  }));
 }
 
-/** Birthmark_2026-10-07_142208_AB12_r3.pdf */
+/** Birthmark_2026-10-07_142208_AB12_r3.pdf; year first so files sort by date. */
 export function reportFileName(data: SessionData): string {
   const s = data.session.startedSnapshot;
   const p = localParts(s.wallEpochMs, s.utcOffsetMinutes);

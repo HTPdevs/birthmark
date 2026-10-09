@@ -12,19 +12,16 @@ type Props = {
   target: Moment | null;
   targetSave: SaveState | undefined;
   events: SessionEvent[];
-  onResuscitate: () => void;
-  onApgar: () => void;
   onSaveLabel: (momentId: string, text: string) => void;
   onDismiss: () => void;
 };
 
 /**
- * Dedicated Resuscitate and APGAR buttons, with the optional label for the most
- * recent generic capture beside them. Resuscitate records the RESUSCITATE
- * milestone immediately; APGAR opens the score editor and records no time.
- * Neither changes the label target, so text being typed stays with its capture.
+ * Optional label for the most recent unlabeled generic capture. Renders nothing
+ * (takes no space) when there is no target, so the milestone row above it keeps
+ * the full height. Resuscitate and APGAR live elsewhere on the recording screen.
  */
-export function CaptureBar({ target, targetSave, events, onResuscitate, onApgar, onSaveLabel, onDismiss }: Props) {
+export function CaptureBar({ target, targetSave, events, onSaveLabel, onDismiss }: Props) {
   const [text, setText] = useState('');
   const targetId = target?.id ?? null;
   const prevTarget = useRef<string | null>(targetId);
@@ -36,66 +33,42 @@ export function CaptureBar({ target, targetSave, events, onResuscitate, onApgar,
     }
   }, [targetId]);
 
+  if (!target) return null;
+
   return (
     <View style={styles.wrap}>
-      <View style={[styles.row, !target && styles.centered]}>
-        <Button
-          label="Resuscitate"
-          onPress={onResuscitate}
-          variant="warning"
-          large
-          style={styles.action}
-          accessibilityHint="Records the Resuscitate milestone now"
-          testID="resuscitate"
+      <Text style={[styles.meta, type.tabular]} numberOfLines={1}>
+        {momentName(target, events)} {target.snapshot ? formatTime24(target.snapshot.wallEpochMs, target.snapshot.utcOffsetMinutes) : ''}{' '}
+        <Text style={targetSave === 'saved' ? styles.saved : styles.pending}>
+          {targetSave === 'saved' ? 'Saved' : 'Saving'}
+        </Text>
+      </Text>
+      <View style={styles.inputRow}>
+        <TextInput
+          value={text}
+          onChangeText={setText}
+          placeholder="Optional label"
+          placeholderTextColor={colors.slate}
+          maxLength={LABEL_MAX_LENGTH}
+          style={styles.input}
+          returnKeyType="done"
+          onSubmitEditing={() => targetId && onSaveLabel(targetId, text)}
+          accessibilityLabel={`Label for ${momentName(target, events)}`}
+          accessibilityHint={LABEL_GUIDANCE}
+          autoCorrect={false}
         />
-        <Button
-          label="APGAR"
-          onPress={onApgar}
-          large
-          style={styles.action}
-          accessibilityHint="Opens APGAR scores. Does not record a time."
-          testID="apgar"
-        />
-        {target ? (
-          <View style={styles.labelBox}>
-            <Text style={[styles.meta, type.tabular]} numberOfLines={1}>
-              {momentName(target, events)} {target.snapshot ? formatTime24(target.snapshot.wallEpochMs, target.snapshot.utcOffsetMinutes) : ''}{' '}
-              <Text style={targetSave === 'saved' ? styles.saved : styles.pending}>
-                {targetSave === 'saved' ? 'Saved' : 'Saving'}
-              </Text>
-            </Text>
-            <View style={styles.inputRow}>
-              <TextInput
-                value={text}
-                onChangeText={setText}
-                placeholder="Optional label"
-                placeholderTextColor={colors.slate}
-                maxLength={LABEL_MAX_LENGTH}
-                style={styles.input}
-                returnKeyType="done"
-                onSubmitEditing={() => targetId && onSaveLabel(targetId, text)}
-                accessibilityLabel={`Label for ${momentName(target, events)}`}
-                accessibilityHint={LABEL_GUIDANCE}
-                autoCorrect={false}
-              />
-              <Button label="Save" onPress={() => targetId && onSaveLabel(targetId, text)} disabled={!text.trim()} />
-              <Button label="Skip" variant="ghost" onPress={onDismiss} />
-            </View>
-          </View>
-        ) : null}
+        <Button label="Save" onPress={() => targetId && onSaveLabel(targetId, text)} disabled={!text.trim()} />
+        <Button label="Skip" variant="ghost" onPress={onDismiss} />
       </View>
-      {target ? <Text style={styles.guidance}>{LABEL_GUIDANCE}</Text> : null}
+      <Text style={styles.guidance} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+        {LABEL_GUIDANCE}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { gap: space.xs },
-  row: { flexDirection: 'row', gap: space.md, alignItems: 'stretch' },
-  // With no label box beside them, Resuscitate and APGAR sit centered under the row.
-  centered: { justifyContent: 'center' },
-  action: { flexShrink: 0, minWidth: 180 },
-  labelBox: { flex: 1, gap: space.xs, justifyContent: 'center' },
   meta: { fontSize: 15, color: colors.slate },
   saved: { color: colors.success, fontWeight: '700' },
   pending: { color: colors.slate, fontWeight: '700' },

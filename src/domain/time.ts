@@ -173,9 +173,10 @@ export function formatTime12(wall: number, offsetMinutes: number): string {
   return `${h}:${pad(p.minute)}:${pad(p.second)} ${suffix}`;
 }
 
+/** MM-DD-YYYY, the one date format the app shows (screens, report, PDF). */
 export function formatDate(wall: number, offsetMinutes: number): string {
   const p = localParts(wall, offsetMinutes);
-  return `${p.year}-${pad(p.month)}-${pad(p.day)}`;
+  return `${pad(p.month)}-${pad(p.day)}-${p.year}`;
 }
 
 export function formatDateTime(wall: number, offsetMinutes: number): string {
@@ -208,12 +209,6 @@ export function parseOffset(input: string): number | null {
   const minutes = Number(m[2]) * 60 + Number(m[3]);
   if (minutes > 14 * 60) return null;
   return m[1] === '-' ? -minutes : minutes;
-}
-
-/** MM-DD-YYYY, the date format the manual time fields show. */
-export function formatDateMDY(wall: number, offsetMinutes: number): string {
-  const p = localParts(wall, offsetMinutes);
-  return `${pad(p.month)}-${pad(p.day)}-${p.year}`;
 }
 
 /** Converts "MM-DD-YYYY" to "YYYY-MM-DD", or null when it is not a real calendar date. */

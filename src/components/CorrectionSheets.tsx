@@ -3,7 +3,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { MANUAL_MILESTONE_CODES, type ManualMilestoneCode, type SessionController } from '../domain/sessionController';
 import { formatElapsed, formatTime24 } from '../domain/time';
-import { effectiveElapsed, effectiveWall, momentName } from '../domain/timeline';
+import { effectiveElapsed, effectiveWall, momentName, recordingOrigin } from '../domain/timeline';
 import { LABEL_GUIDANCE, LABEL_MAX_LENGTH, type Moment, milestoneLabel } from '../domain/types';
 import { useControllerState } from '../state/store';
 import { Button } from '../ui/Button';
@@ -12,9 +12,14 @@ import { Sheet } from '../ui/Sheet';
 import { colors, radius, space } from '../ui/theme';
 import { ManualTimeFields } from './ManualTimeFields';
 
-function draftFor(m: Moment | null, fallbackWall: number): ManualTimeDraft {
+/** Elapsed in the sheets counts from the first recorded moment, as in the report; Start before any record. */
+function originOf(moments: Moment[]): number {
+  return recordingOrigin(moments) ?? 0;
+}
+
+function draftFor(m: Moment | null, fallbackWall: number, origin: number): ManualTimeDraft {
   const wall = m ? effectiveWall(m) ?? fallbackWall : fallbackWall;
-  return draftAt(wall, m ? effectiveElapsed(m) : 0);
+  return draftAt(wall, m ? effectiveElapsed(m) : origin, undefined, origin);
 }
 
 /** Flag/unflag or correct the effective time of one moment. Originals are kept. */
@@ -29,14 +34,15 @@ export function CorrectionSheet({
 }) {
   const { data } = useControllerState(controller);
   const m = momentId ? data.moments.find((x) => x.id === momentId) ?? null : null;
-  const [draft, setDraft] = useState<ManualTimeDraft>(() => draftFor(m, data.session.startedSnapshot.wallEpochMs));
+  const origin = originOf(data.moments);
+  const [draft, setDraft] = useState<ManualTimeDraft>(() => draftFor(m, data.session.startedSnapshot.wallEpochMs, origin));
   const [reason, setReason] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [lastId, setLastId] = useState(momentId);
 
   if (momentId !== lastId) {
     setLastId(momentId);
-    setDraft(draftFor(m, data.session.startedSnapshot.wallEpochMs));
+    setDraft(draftFor(m, data.session.startedSnapshot.wallEpochMs, origin));
     setReason('');
     setMessage(null);
   }
@@ -45,7 +51,7 @@ export function CorrectionSheet({
   const editable = m.kind === 'capture' || m.kind === 'milestone';
 
   const saveTime = () => {
-    const input = draftToInput(draft);
+    const input = draftToInput(draft, undefined, origin);
     if ('error' in input) return setMessage(input.error);
     const r = controller.correctTime(m.id, input, reason.trim() || null);
     if (!r.ok) return setMessage(r.error);
@@ -55,8 +61,8 @@ export function CorrectionSheet({
   return (
     <Sheet visible={!!momentId} title={momentName(m, data.events)} onClose={onClose}>
       <Text style={styles.meta}>
-        Captured {m.snapshot ? `${formatTime24(m.snapshot.wallEpochMs, m.snapshot.utcOffsetMinutes)} (${formatElapsed(m.originalElapsedMs ?? 0)})` : 'manually'}
-        {m.source === 'corrected' ? ` · now ${formatElapsed(effectiveElapsed(m))}` : ''}
+        Captured {m.snapshot ? `${formatTime24(m.snapshot.wallEpochMs, m.snapshot.utcOffsetMinutes)} (${formatElapsed(Math.max(0, (m.originalElapsedMs ?? 0) - origin))})` : 'manually'}
+        {m.source === 'corrected' ? ` · now ${formatElapsed(Math.max(0, effectiveElapsed(m) - origin))}` : ''}
       </Text>
       {!editable ? (
         <Text style={styles.meta}>System records cannot be edited.</Text>
@@ -118,13 +124,14 @@ export function AddMissedSheet({
 }) {
   const { data } = useControllerState(controller);
   const [entryType, setEntryType] = useState<EntryType | null>(null);
-  const [draft, setDraft] = useState<ManualTimeDraft>(() => draftFor(null, data.session.startedSnapshot.wallEpochMs));
+  const origin = originOf(data.moments);
+  const [draft, setDraft] = useState<ManualTimeDraft>(() => draftFor(null, data.session.startedSnapshot.wallEpochMs, origin));
   const [notes, setNotes] = useState('');
   const [message, setMessage] = useState<string | null>(null);
 
   const save = () => {
     if (entryType === null) return setMessage('Choose what to add.');
-    const input = draftToInput(draft);
+    const input = draftToInput(draft, undefined, origin);
     if ('error' in input) return setMessage(input.error);
     const r =
       entryType === 'OTHER'
