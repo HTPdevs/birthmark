@@ -1,5 +1,13 @@
-import { ActiveSessionExistsError, SessionController, sanitizeLabel } from '@/domain/sessionController';
+import {
+  ActiveSessionExistsError,
+  MANUAL_MILESTONE_CODES,
+  type ManualMilestoneCode,
+  SessionController,
+  sanitizeLabel,
+} from '@/domain/sessionController';
 import { effectiveElapsed, intervalsSincePrevious, liveStatus, sinceLastMoment, sortByEffective } from '@/domain/timeline';
+import { type Moment, wallMs } from '@/domain/types';
+import { buildReport } from '@/report/reportModel';
 import { migrate } from '@/storage/db';
 import * as repo from '@/storage/repository';
 

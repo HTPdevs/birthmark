@@ -55,18 +55,24 @@ export default function Home() {
           contentContainerStyle={styles.center}
           alwaysBounceVertical={false}
         >
-          <View
-            style={styles.lockup}
-            accessible
-            accessibilityRole="header"
-            accessibilityLabel="Birthmark"
-          >
-            <Image
-              source={require("../../assets/lockup.png")}
-              style={styles.lockupImage}
-              contentFit="contain"
-              accessible={false}
-            />
+          {/* Lockup and tagline read as one unit, so they sit closer than the column gap. */}
+          <View style={styles.brand}>
+            <View
+              style={styles.lockup}
+              accessible
+              accessibilityRole="header"
+              accessibilityLabel="Birthmark"
+            >
+              <Image
+                source={require("../../assets/lockup.png")}
+                style={styles.lockupImage}
+                contentFit="contain"
+                accessible={false}
+              />
+            </View>
+            <Text style={styles.tagline}>
+              Seamlessly document the birth flow in real-time
+            </Text>
           </View>
           {active ? (
             <Button
