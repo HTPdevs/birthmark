@@ -34,6 +34,7 @@ export function SaveStatus({ queue, onRetry }: { queue: QueueStatus; onRetry: ()
   return (
     <Button
       label="History"
+      icon="time-outline"
       variant="secondary"
       accessibilityHint="Opens finished sessions"
       onPress={() => router.push('/history')}

@@ -89,6 +89,38 @@ export function intervalsSincePrevious(moments: Moment[]): Map<string, ElapsedMs
   return out;
 }
 
+/**
+ * Display origin for recorded time: the earliest included record (a capture or
+ * milestone that is not an accidental tap) on the effective timeline. Pressing
+ * Start does not start recorded time; the first recorded moment does. A manual
+ * or corrected earlier moment moves the origin. Stored elapsed values and the
+ * clock anchor stay measured from session start; only display subtracts this.
+ * Null when nothing has been recorded.
+ */
+export function recordingOrigin(moments: Moment[]): ElapsedMs | null {
+  let origin: number | null = null;
+  for (const m of moments) {
+    if (!isIncluded(m)) continue;
+    const e = effectiveElapsed(m);
+    if (origin === null || e < origin) origin = e;
+  }
+  return origin === null ? null : elapsedMs(origin);
+}
+
+/** A session elapsed value measured from the recording origin, never negative. */
+export function sinceOrigin(value: ElapsedMs, origin: ElapsedMs | null): ElapsedMs {
+  return elapsedMs(Math.max(0, value - (origin ?? 0)));
+}
+
+/**
+ * Recorded total: end (finish, or now while active) minus the origin. Null with
+ * no recorded moment or no end value.
+ */
+export function recordedTotal(end: ElapsedMs | null, origin: ElapsedMs | null): ElapsedMs | null {
+  if (end === null || origin === null) return null;
+  return sinceOrigin(end, origin);
+}
+
 export function lastIncluded(moments: Moment[]): Moment | null {
   const included = sortByEffective(moments).filter(isIncluded);
   return included.length ? included[included.length - 1] : null;

@@ -5,7 +5,8 @@ import {
   computeElapsed,
   deviceOffsetAtLocal,
   deviceOffsetAtWall,
-  formatDateMDY,
+  formatDate,
+  formatDateTime,
   parseDateMDY,
   detectClockChanges,
   formatElapsed,
@@ -123,6 +124,12 @@ describe('formatting (L03)', () => {
   const offset = -420;
   const at = (h: number, m: number, s: number) => Date.UTC(2026, 9, 7, h, m, s) - offset * 60_000;
 
+  it('shows dates as MM-DD-YYYY everywhere, date and time together too', () => {
+    expect(formatDate(T0, offset)).toBe('10-07-2026');
+    expect(formatDate(at(23, 59, 59) + 1000, offset)).toBe('10-08-2026');
+    expect(formatDateTime(T0, offset)).toBe('10-07-2026 14:22:08');
+  });
+
   it('shows 24-hour time by default', () => {
     expect(formatTime24(T0, offset)).toBe('14:22:08');
   });
@@ -158,7 +165,7 @@ describe('parsing manual input', () => {
 
 describe('MM-DD-YYYY dates and device time zone', () => {
   it('formats and parses month-first dates', () => {
-    expect(formatDateMDY(T0, -420)).toBe('10-07-2026');
+    expect(formatDate(T0, -420)).toBe('10-07-2026');
     expect(parseDateMDY('10-07-2026')).toBe('2026-10-07');
     expect(parseDateMDY(' 1/5/2027 ')).toBe('2027-01-05');
     expect(parseDateMDY('02-29-2028')).toBe('2028-02-29');

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { type LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { formatTime12, formatTime24 } from '../domain/time';
@@ -11,6 +11,8 @@ type Props = {
   snapshot: ClockSnapshot;
   format: ClockFormat;
   onToggle: () => void;
+  /** Reports the fitted font size so secondary timers can stay smaller than the clock. */
+  onFontSize?: (fontSize: number) => void;
 };
 
 // Approximate advance width per character relative to font size. Bold tabular
@@ -22,9 +24,10 @@ const HEIGHT_SHARE = 0.9;
 
 /**
  * Current device clock, sized to the largest unclipped size its container
- * allows. Tapping toggles 24h / 12h display only; it never records anything.
+ * allows and centered in it. Tapping toggles 24h / 12h display only; it never
+ * records anything.
  */
-export function BigClock({ snapshot, format, onToggle }: Props) {
+export function BigClock({ snapshot, format, onToggle, onFontSize }: Props) {
   const [box, setBox] = useState({ w: 0, h: 0 });
   const text =
     format === '24h'
@@ -33,6 +36,10 @@ export function BigClock({ snapshot, format, onToggle }: Props) {
   // Size against the widest string for the format so the clock never jumps.
   const chars = format === '24h' ? 8 : 11;
   const fontSize = box.w ? Math.max(40, Math.min(box.w / (chars * WIDTH_PER_CHAR), box.h * HEIGHT_SHARE)) : 72;
+
+  useEffect(() => {
+    onFontSize?.(fontSize);
+  }, [fontSize, onFontSize]);
 
   const onLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -67,7 +74,7 @@ export function BigClock({ snapshot, format, onToggle }: Props) {
 const styles = StyleSheet.create({
   wrap: { flex: 1, minHeight: 64 },
   fill: { flex: 1, justifyContent: 'center' },
-  clock: { color: colors.ink, fontWeight: '800', letterSpacing: -1 },
+  clock: { color: colors.ink, fontWeight: '800', letterSpacing: -1, textAlign: 'center' },
   badge: {
     position: 'absolute',
     top: 0,

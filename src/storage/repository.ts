@@ -396,10 +396,26 @@ export type SessionSummary = {
   status: Session['status'];
   startedSnapshot: ClockSnapshot;
   finishElapsedMs: ElapsedMs | null;
+  /**
+   * Recording origin (see recordingOrigin in domain/timeline): the earliest
+   * effective elapsed among captures and milestones not flagged accidental.
+   * Null when the session has no such moment.
+   */
+  firstMomentElapsedMs: ElapsedMs | null;
 };
 
 export async function listSessions(db: Db): Promise<SessionSummary[]> {
-  const rows = await db.getAllAsync<SessionRow>('SELECT * FROM sessions ORDER BY created_at DESC', []);
+  // COALESCE mirrors effectiveElapsed(): effective, then original, then 0.
+  const rows = await db.getAllAsync<SessionRow & { first_moment_elapsed_ms: number | null }>(
+    `SELECT s.*,
+       (SELECT MIN(COALESCE(m.effective_elapsed_ms, m.original_elapsed_ms, 0))
+          FROM moments m
+         WHERE m.session_id = s.id
+           AND m.kind IN ('capture', 'milestone')
+           AND m.flagged_accidental = 0) AS first_moment_elapsed_ms
+     FROM sessions s ORDER BY s.created_at DESC`,
+    [],
+  );
   return rows.map((r) => {
     const s = toSession(r);
     return {
@@ -408,6 +424,7 @@ export async function listSessions(db: Db): Promise<SessionSummary[]> {
       status: s.status,
       startedSnapshot: s.startedSnapshot,
       finishElapsedMs: s.finishElapsedMs,
+      firstMomentElapsedMs: r.first_moment_elapsed_ms as ElapsedMs | null,
     };
   });
 }

@@ -1,15 +1,25 @@
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { formatDate, formatElapsed, formatTime24 } from "../domain/time";
-import { useAppState } from "../state/store";
+import { recordedTotal } from "../domain/timeline";
+import { appStore, useAppState } from "../state/store";
 import { Button } from "../ui/Button";
 import { colors, radius, space, type } from "../ui/theme";
 
 export default function History() {
   const { sessions } = useAppState();
   const completed = sessions.filter((s) => s.status === "finished");
+
+  // Corrections made on a report change the first recorded moment, so re-read
+  // the durations whenever this screen comes back into view.
+  useFocusEffect(
+    useCallback(() => {
+      appStore.refreshSessions().catch(() => {});
+    }, []),
+  );
 
   return (
     <SafeAreaView
@@ -19,6 +29,8 @@ export default function History() {
       <View style={styles.toolbar}>
         <Button
           label="Home"
+          icon="home"
+          iconOnly
           variant="ghost"
           onPress={() =>
             router.canGoBack() ? router.back() : router.replace("/")
@@ -37,6 +49,11 @@ export default function History() {
         }
         renderItem={({ item }) => {
           const s = item.startedSnapshot;
+          const total = recordedTotal(
+            item.finishElapsedMs,
+            item.firstMomentElapsedMs,
+          );
+          const duration = total === null ? "" : formatElapsed(total);
           return (
             <Pressable
               onPress={() =>
@@ -46,7 +63,7 @@ export default function History() {
                 })
               }
               accessibilityRole="button"
-              accessibilityLabel={`Session ${item.shortId}, ${formatDate(s.wallEpochMs, s.utcOffsetMinutes)} at ${formatTime24(s.wallEpochMs, s.utcOffsetMinutes)}`}
+              accessibilityLabel={`Session ${item.shortId}, ${formatDate(s.wallEpochMs, s.utcOffsetMinutes)} at ${formatTime24(s.wallEpochMs, s.utcOffsetMinutes)}${duration ? `, total time ${duration}` : ""}`}
               style={({ pressed }) => [styles.item, pressed && styles.pressed]}
             >
               <View>
@@ -57,9 +74,7 @@ export default function History() {
                 <Text style={styles.itemId}>{item.shortId}</Text>
               </View>
               <Text style={[styles.itemDur, type.tabular]}>
-                {item.finishElapsedMs === null
-                  ? ""
-                  : formatElapsed(item.finishElapsedMs)}
+                {duration}
               </Text>
             </Pressable>
           );
