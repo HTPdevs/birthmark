@@ -8,7 +8,7 @@ import { AddMissedSheet, CorrectionSheet } from '../../components/CorrectionShee
 import { SaveStatus } from '../../components/SaveStatus';
 import { ActiveSessionExistsError, type SessionController } from '../../domain/sessionController';
 import { type GeneratedPdf, canSaveToFolder, generatePdf, savePdfToFolder, sharePdf } from '../../platform/exportPdf';
-import { type TimelineRow, buildReport } from '../../report/reportModel';
+import { type ScreenTimelineRow, buildReport, screenTimeline } from '../../report/reportModel';
 import { appStore, useAppState, useClockTick, useControllerState } from '../../state/store';
 import { Button } from '../../ui/Button';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
@@ -112,8 +112,8 @@ function Report({ controller }: { controller: SessionController }) {
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <View style={styles.meta}>
           <Meta k="Date" v={report.header.sessionDate} />
-          <Meta k="Start" v={report.header.startTime} />
-          <Meta k="End" v={report.header.endTime} />
+          <Meta k="Start time" v={report.header.startTime} />
+          <Meta k="End time" v={report.header.endTime} />
         </View>
 
         <View style={styles.actions}>
@@ -131,10 +131,10 @@ function Report({ controller }: { controller: SessionController }) {
         </View>
 
         <Text style={styles.h2}>Timeline</Text>
-        <Text style={styles.hint}>Tap a moment to rename, flag, or correct it.</Text>
-        <TableHead cols={['#', 'Label', 'Time (24h)', 'Time since last', 'Flags']} />
-        {report.timeline.map((r) => (
-          <TimelineRowView key={r.momentId} row={r} onPress={r.isSystem ? undefined : () => setEditing(r.momentId)} />
+        <Text style={styles.hint}>Tap a record to edit entry.</Text>
+        <TableHead cols={['#', 'Elapsed time', 'Time (24h)', 'Time since last', 'Notes']} />
+        {screenTimeline(report).map((r) => (
+          <TimelineRowView key={r.key} row={r} onPress={r.momentId ? () => setEditing(r.momentId) : undefined} />
         ))}
         <TotalRow value={report.header.totalElapsed} />
 
@@ -219,8 +219,8 @@ function Meta({ k, v }: { k: string; v: string }) {
   );
 }
 
-// #, Label, Time (24h), Time since last, Flags
-const WIDTHS = [0.5, 3, 2, 1.5, 2.5];
+// #, Elapsed time, Time (24h), Time since last, Notes
+const WIDTHS = [0.5, 3, 2, 1.7, 2.5];
 
 function TableHead({ cols }: { cols: string[] }) {
   return (
@@ -234,14 +234,14 @@ function TableHead({ cols }: { cols: string[] }) {
   );
 }
 
-function TimelineRowView({ row, onPress }: { row: TimelineRow; onPress?: () => void }) {
-  const cells = [String(row.sequence), row.label, row.time, row.interval, row.flags.join(', ')];
+function TimelineRowView({ row, onPress }: { row: ScreenTimelineRow; onPress?: () => void }) {
+  const cells = [String(row.index), row.span, row.time, row.elapsed, row.notes];
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={`${row.label}, ${row.time}, time since last ${row.interval}`}
+      accessibilityLabel={`${row.span}, ${row.time}, time since last ${row.elapsed}${row.notes ? `, ${row.notes}` : ''}`}
       style={({ pressed }) => [styles.tr, pressed && styles.pressed]}>
       {cells.map((c, i) => (
         <Text key={i} style={[styles.td, type.tabular, { flex: WIDTHS[i] }, row.isSystem && styles.system]}>
@@ -252,7 +252,7 @@ function TimelineRowView({ row, onPress }: { row: TimelineRow; onPress?: () => v
   );
 }
 
-/** Summary line under the timeline: label in the Label column, value in the Time since last column. */
+/** Summary line under the timeline: label in the Elapsed time column, value in the Time since last column. */
 function TotalRow({ value }: { value: string }) {
   const cells = ['', 'Total time', '', value, ''];
   return (
@@ -287,11 +287,11 @@ const styles = StyleSheet.create({
   metaVal: { fontSize: 16, color: colors.ink },
   actions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space.sm, marginBottom: space.md },
   h2: { fontSize: 20, fontWeight: '800', color: colors.ink, marginTop: space.lg },
-  hint: { fontSize: 14, color: colors.slate },
+  hint: { fontSize: 15, color: colors.slate },
   thead: { borderBottomWidth: 2, borderBottomColor: colors.line },
   tr: { flexDirection: 'row', gap: space.sm, paddingVertical: space.sm, borderBottomWidth: 1, borderBottomColor: colors.mist, minHeight: 44, alignItems: 'center' },
-  th: { fontSize: 13, fontWeight: '700', color: colors.slate },
-  td: { fontSize: 15, color: colors.ink },
+  th: { fontSize: 16, fontWeight: '700', color: colors.slate },
+  td: { fontSize: 18, color: colors.ink },
   w3: { flex: 3 },
   system: { color: colors.slate, fontStyle: 'italic' },
   pressed: { backgroundColor: colors.mist },
@@ -299,5 +299,5 @@ const styles = StyleSheet.create({
   totalText: { fontWeight: '800' },
   line: { fontSize: 15, color: colors.ink },
   // Warning role (rust): the footer tells the reader to verify the device-clock times.
-  footer: { marginTop: space.xl, fontSize: 14, fontWeight: '700', color: colors.danger },
+  footer: { marginTop: space.xl, fontSize: 14, fontWeight: '700', color: colors.danger, textAlign: 'center' },
 });

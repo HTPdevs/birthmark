@@ -209,3 +209,45 @@ export function parseOffset(input: string): number | null {
   if (minutes > 14 * 60) return null;
   return m[1] === '-' ? -minutes : minutes;
 }
+
+/** MM-DD-YYYY, the date format the manual time fields show. */
+export function formatDateMDY(wall: number, offsetMinutes: number): string {
+  const p = localParts(wall, offsetMinutes);
+  return `${pad(p.month)}-${pad(p.day)}-${p.year}`;
+}
+
+/** Converts "MM-DD-YYYY" to "YYYY-MM-DD", or null when it is not a real calendar date. */
+export function parseDateMDY(input: string): string | null {
+  const m = /^\s*(\d{1,2})[-/](\d{1,2})[-/](\d{4})\s*$/.exec(input);
+  if (!m) return null;
+  const [mo, da, y] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const check = new Date(Date.UTC(y, mo - 1, da));
+  if (check.getUTCFullYear() !== y || check.getUTCMonth() !== mo - 1 || check.getUTCDate() !== da) return null;
+  return `${y}-${pad(mo)}-${pad(da)}`;
+}
+
+/**
+ * Minutes east of UTC that the device time zone uses at an instant. The
+ * resolver is injectable so tests do not depend on the machine's zone.
+ */
+export function deviceOffsetAtWall(wall: number, tzOffsetOf: (d: Date) => number = (d) => d.getTimezoneOffset()): number {
+  // getTimezoneOffset is minutes WEST of UTC; `|| 0` turns -0 into 0.
+  return -tzOffsetOf(new Date(wall)) || 0;
+}
+
+/**
+ * Offset the device time zone uses for a local "YYYY-MM-DD" + "HH:mm:ss".
+ * Local fields are read as device time. A time skipped by a DST jump resolves
+ * the way the platform Date does (rolled forward); a repeated hour picks one.
+ */
+export function deviceOffsetAtLocal(
+  date: string,
+  time: string,
+  tzOffsetOf: (d: Date) => number = (d) => d.getTimezoneOffset(),
+): number | null {
+  const d = /^\s*(\d{4})-(\d{2})-(\d{2})\s*$/.exec(date);
+  const t = /^\s*(\d{2}):(\d{2}):(\d{2})\s*$/.exec(time);
+  if (!d || !t) return null;
+  const local = new Date(Number(d[1]), Number(d[2]) - 1, Number(d[3]), Number(t[1]), Number(t[2]), Number(t[3]));
+  return -tzOffsetOf(local) || 0;
+}

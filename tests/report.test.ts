@@ -1,6 +1,6 @@
 import { SessionController } from '@/domain/sessionController';
 import { wallMs } from '@/domain/types';
-import { REPORT_FOOTER, buildReport, reportFileName } from '@/report/reportModel';
+import { REPORT_FOOTER, buildReport, reportFileName, screenTimeline } from '@/report/reportModel';
 import { escapeHtml, renderReportHtml } from '@/report/renderHtml';
 import { migrate } from '@/storage/db';
 
@@ -130,6 +130,40 @@ describe('report model', () => {
       { label: 'Moment 1', original: '14:22:28 (00:00:20)', effective: '14:22:23 (00:00:15)', source: 'Corrected' },
       { label: 'Missed', original: 'Not captured (manual entry)', effective: '14:22:13 (00:00:05)', source: 'Manual' },
     ]);
+  });
+
+  it('names each on-screen row by the span it closes, after a Start time row', async () => {
+    const c = await SessionController.start(deps());
+    clock.advance(20_000);
+    c.markMilestone('CROWN');
+    clock.advance(5000);
+    const acc = c.markMoment();
+    c.setAccidental(acc, true);
+    clock.advance(25_000);
+    const head = c.markMilestone('HEAD');
+    c.labelMoment(head, 'Face up');
+    clock.advance(10_000);
+    await c.finish();
+    const r = buildReport(c.getState().data, wallMs(clock.wall), null);
+    expect(screenTimeline(r).map((x) => [x.index, x.span, x.time, x.elapsed, x.notes, x.momentId !== null])).toEqual([
+      [1, 'Start time', '14:22:08', '—', '', false],
+      [2, 'Start to Crown', '14:22:28', '00:00:20', '', true],
+      // The accidental tap in between is excluded and does not split Crown to Head.
+      [3, 'Crown to Head', '14:22:58', '00:00:30', 'Face up', true],
+      [4, 'Finish time', '14:23:08', '—', '', false],
+    ]);
+    // The PDF still gets the full label and capture sequence.
+    expect(r.timeline.find((x) => x.span === 'Crown to Head')!.label).toBe('Head: Face up');
+  });
+
+  it('puts flags in Notes after the label', async () => {
+    const c = await SessionController.start(deps());
+    clock.advance(20_000);
+    const crown = c.markMilestone('CROWN');
+    c.labelMoment(crown, 'note');
+    c.correctTime(crown, { mode: 'elapsed', elapsed: '00:00:15' });
+    const r = buildReport(c.getState().data, wallMs(clock.wall), c.elapsedAt(clock.read()));
+    expect(screenTimeline(r)[1]).toMatchObject({ span: 'Start to Crown', elapsed: '00:00:15', notes: 'note, Corrected' });
   });
 
   it('builds the spec filename', async () => {

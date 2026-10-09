@@ -79,7 +79,7 @@ export function resolveManualTime(
     offset = ref.offset;
   } else {
     const parsed = parseLocalDateTime(input.date, input.time, input.offsetMinutes);
-    if (parsed === null) return { ok: false, error: 'Enter date as YYYY-MM-DD and time as HH:mm:ss (24-hour).' };
+    if (parsed === null) return { ok: false, error: 'Enter the time as HH:mm:ss (24-hour).' };
     wall = parsed;
     offset = input.offsetMinutes;
     const byWall = [...refs].sort((a, b) => a.wall - b.wall);

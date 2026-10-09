@@ -2,22 +2,22 @@ import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { MANUAL_MILESTONE_CODES, type ManualMilestoneCode, type SessionController } from '../domain/sessionController';
-import { formatDate, formatElapsed, formatTime24 } from '../domain/time';
+import { formatElapsed, formatTime24 } from '../domain/time';
 import { effectiveElapsed, effectiveWall, momentName } from '../domain/timeline';
 import { LABEL_GUIDANCE, LABEL_MAX_LENGTH, type Moment, milestoneLabel } from '../domain/types';
 import { useControllerState } from '../state/store';
 import { Button } from '../ui/Button';
+import { type ManualTimeDraft, draftAt, draftToInput } from '../ui/manualTimeDraft';
 import { Sheet } from '../ui/Sheet';
 import { colors, radius, space } from '../ui/theme';
-import { ManualTimeFields, type ManualTimeDraft, draftToInput, initialDraft } from './ManualTimeFields';
+import { ManualTimeFields } from './ManualTimeFields';
 
-function draftFor(m: Moment | null, fallbackWall: number, offset: number): ManualTimeDraft {
+function draftFor(m: Moment | null, fallbackWall: number): ManualTimeDraft {
   const wall = m ? effectiveWall(m) ?? fallbackWall : fallbackWall;
-  const elapsed = m ? formatElapsed(effectiveElapsed(m)) : '00:00:00';
-  return initialDraft(formatDate(wall, offset), formatTime24(wall, offset), elapsed, offset);
+  return draftAt(wall, m ? effectiveElapsed(m) : 0);
 }
 
-/** Rename, flag/unflag, or correct the effective time of one moment. Originals are kept. */
+/** Flag/unflag or correct the effective time of one moment. Originals are kept. */
 export function CorrectionSheet({
   controller,
   momentId,
@@ -29,17 +29,14 @@ export function CorrectionSheet({
 }) {
   const { data } = useControllerState(controller);
   const m = momentId ? data.moments.find((x) => x.id === momentId) ?? null : null;
-  const offset = data.session.startedSnapshot.utcOffsetMinutes;
-  const [label, setLabel] = useState(m?.label ?? '');
-  const [draft, setDraft] = useState<ManualTimeDraft>(() => draftFor(m, data.session.startedSnapshot.wallEpochMs, offset));
+  const [draft, setDraft] = useState<ManualTimeDraft>(() => draftFor(m, data.session.startedSnapshot.wallEpochMs));
   const [reason, setReason] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [lastId, setLastId] = useState(momentId);
 
   if (momentId !== lastId) {
     setLastId(momentId);
-    setLabel(m?.label ?? '');
-    setDraft(draftFor(m, data.session.startedSnapshot.wallEpochMs, offset));
+    setDraft(draftFor(m, data.session.startedSnapshot.wallEpochMs));
     setReason('');
     setMessage(null);
   }
@@ -65,33 +62,26 @@ export function CorrectionSheet({
         <Text style={styles.meta}>System records cannot be edited.</Text>
       ) : (
         <>
-          <Text style={styles.section}>Label</Text>
-          <View style={styles.row}>
-            <TextInput
-              value={label}
-              onChangeText={setLabel}
-              maxLength={LABEL_MAX_LENGTH}
-              placeholder="Optional label"
-              placeholderTextColor={colors.slate}
-              style={styles.input}
-              accessibilityLabel="Label"
-              accessibilityHint={LABEL_GUIDANCE}
-              autoCorrect={false}
+          <Text style={styles.section}>Accidental tap?</Text>
+          <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Accidental tap">
+            <Button
+              label="Yes"
+              variant={m.flaggedAccidental ? 'warning' : 'secondary'}
+              selected={m.flaggedAccidental}
+              accessibilityHint="Excludes this record from the timeline. It stays in the report appendix."
+              onPress={() => !m.flaggedAccidental && controller.setAccidental(m.id, true, reason.trim() || null)}
             />
-            <Button label="Save label" onPress={() => controller.labelMoment(m.id, label, reason.trim() || null)} />
+            <Button
+              label="No"
+              variant={m.flaggedAccidental ? 'secondary' : 'primary'}
+              selected={!m.flaggedAccidental}
+              onPress={() => m.flaggedAccidental && controller.setAccidental(m.id, false, reason.trim() || null)}
+            />
           </View>
-          <Text style={styles.hint}>{LABEL_GUIDANCE}</Text>
-
-          <Text style={styles.section}>Accidental tap</Text>
-          <Button
-            label={m.flaggedAccidental ? 'Include again (unflag)' : 'Flag as accidental tap'}
-            variant={m.flaggedAccidental ? 'secondary' : 'danger'}
-            onPress={() => controller.setAccidental(m.id, !m.flaggedAccidental, reason.trim() || null)}
-          />
 
           <Text style={styles.section}>Correct time</Text>
           <ManualTimeFields draft={draft} onChange={setDraft} />
-          <Button label="Save corrected time" variant="primary" onPress={saveTime} />
+          <Button label="Save and update" variant="primary" onPress={saveTime} />
 
           <Text style={styles.section}>Reason (optional)</Text>
           <TextInput
@@ -127,9 +117,8 @@ export function AddMissedSheet({
   onClose: () => void;
 }) {
   const { data } = useControllerState(controller);
-  const offset = data.session.startedSnapshot.utcOffsetMinutes;
   const [entryType, setEntryType] = useState<EntryType | null>(null);
-  const [draft, setDraft] = useState<ManualTimeDraft>(() => draftFor(null, data.session.startedSnapshot.wallEpochMs, offset));
+  const [draft, setDraft] = useState<ManualTimeDraft>(() => draftFor(null, data.session.startedSnapshot.wallEpochMs));
   const [notes, setNotes] = useState('');
   const [message, setMessage] = useState<string | null>(null);
 

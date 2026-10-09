@@ -14,6 +14,8 @@ type Props = {
   accessibilityHint?: string;
   large?: boolean;
   testID?: string;
+  /** Set for a choice in a group (Yes / No); announced as selected. */
+  selected?: boolean;
 };
 
 export function Button({
@@ -26,6 +28,7 @@ export function Button({
   accessibilityHint,
   large,
   testID,
+  selected,
 }: Props) {
   return (
     <Pressable
@@ -33,7 +36,7 @@ export function Button({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityHint={accessibilityHint}
-      accessibilityState={{ disabled: !!disabled }}
+      accessibilityState={selected === undefined ? { disabled: !!disabled } : { disabled: !!disabled, selected }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [

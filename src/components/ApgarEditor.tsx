@@ -10,6 +10,12 @@ import { colors, radius, space } from '../ui/theme';
 const POINTS: AssessmentPoint[] = ['one_minute', 'five_minute'];
 const SCORES = Array.from({ length: 11 }, (_, i) => i);
 
+// All 11 chips share one row per assessment so the sheet fits a landscape
+// phone without scrolling: header ~69 + body padding 32 + note ~20 + two
+// blocks (title ~26 + 4 + chips 52) + sheet gaps 24 is ~309pt, under the
+// Sheet's 96% cap on a 375pt-tall screen (360pt). Chips stay >= 44pt wide
+// down to a 667pt-wide screen.
+
 /**
  * Two untimed assessments. Nothing is preselected (unset is not zero). Saving a
  * score never creates a timed moment or changes the live milestone status.
@@ -25,8 +31,8 @@ export function ApgarEditor({
 }) {
   const { assessments } = useControllerState(controller).data;
   return (
-    <Sheet visible={visible} title="APGAR" onClose={onClose} width="80%">
-      <Text style={styles.note}>Operator-entered scores. No assessment time is recorded.</Text>
+    <Sheet visible={visible} title="APGAR" onClose={onClose} width="90%">
+      <Text style={styles.note}>No assessment time recorded.</Text>
       {POINTS.map((point) => {
         const current = assessments.find((a) => a.assessmentPoint === point)?.score;
         return (
@@ -60,12 +66,13 @@ export function ApgarEditor({
 
 const styles = StyleSheet.create({
   note: { color: colors.slate, fontSize: 15 },
-  block: { gap: space.sm },
+  block: { gap: space.xs },
   title: { fontSize: 20, fontWeight: '800', color: colors.ink },
   value: { fontSize: 18, fontWeight: '600', color: colors.slate },
-  scores: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  scores: { flexDirection: 'row', gap: space.xs },
   chip: {
-    width: 52,
+    flex: 1,
+    minWidth: 44,
     height: 52,
     borderRadius: radius.sm,
     borderWidth: 2,

@@ -55,22 +55,25 @@ export default function Home() {
           contentContainerStyle={styles.center}
           alwaysBounceVertical={false}
         >
-          <View
-            style={styles.lockup}
-            accessible
-            accessibilityRole="header"
-            accessibilityLabel="Birthmark"
-          >
-            <Image
-              source={require("../../assets/lockup.png")}
-              style={styles.lockupImage}
-              contentFit="contain"
-              accessible={false}
-            />
+          {/* Lockup and tagline read as one unit, so they sit closer than the column gap. */}
+          <View style={styles.brand}>
+            <View
+              style={styles.lockup}
+              accessible
+              accessibilityRole="header"
+              accessibilityLabel="Birthmark"
+            >
+              <Image
+                source={require("../../assets/lockup.png")}
+                style={styles.lockupImage}
+                contentFit="contain"
+                accessible={false}
+              />
+            </View>
+            <Text style={styles.tagline}>
+              Seamlessly document the birth flow in real-time
+            </Text>
           </View>
-          <Text style={styles.tagline}>
-            Seamlessly document the birth flow in real-time
-          </Text>
           {active ? (
             <Button
               label="Return to recording"
@@ -137,6 +140,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  brand: { alignItems: "center", gap: space.xs },
   lockup: { alignSelf: "center" },
   lockupImage: { width: LOCKUP_WIDTH, height: LOCKUP_HEIGHT },
   tagline: { fontSize: 20, color: colors.slate, textAlign: "center" },

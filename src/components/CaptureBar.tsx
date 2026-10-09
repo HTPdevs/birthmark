@@ -38,7 +38,7 @@ export function CaptureBar({ target, targetSave, events, onResuscitate, onApgar,
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.row}>
+      <View style={[styles.row, !target && styles.centered]}>
         <Button
           label="Resuscitate"
           onPress={onResuscitate}
@@ -92,6 +92,8 @@ export function CaptureBar({ target, targetSave, events, onResuscitate, onApgar,
 const styles = StyleSheet.create({
   wrap: { gap: space.xs },
   row: { flexDirection: 'row', gap: space.md, alignItems: 'stretch' },
+  // With no label box beside them, Resuscitate and APGAR sit centered under the row.
+  centered: { justifyContent: 'center' },
   action: { flexShrink: 0, minWidth: 180 },
   labelBox: { flex: 1, gap: space.xs, justifyContent: 'center' },
   meta: { fontSize: 15, color: colors.slate },

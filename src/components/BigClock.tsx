@@ -13,8 +13,12 @@ type Props = {
   onToggle: () => void;
 };
 
-// Approximate advance width of a tabular digit string relative to font size.
-const WIDTH_PER_CHAR = 0.62;
+// Approximate advance width per character relative to font size. Bold tabular
+// digits are ~0.6em and colons ~0.3em, so 0.56 averaged over "12:34:56" still
+// leaves slack; adjustsFontSizeToFit below catches any font that runs wider.
+const WIDTH_PER_CHAR = 0.56;
+// Share of the box height the font may use; with lineHeight 1.08 the line fills ~97%.
+const HEIGHT_SHARE = 0.9;
 
 /**
  * Current device clock, sized to the largest unclipped size its container
@@ -28,7 +32,7 @@ export function BigClock({ snapshot, format, onToggle }: Props) {
       : formatTime12(snapshot.wallEpochMs, snapshot.utcOffsetMinutes);
   // Size against the widest string for the format so the clock never jumps.
   const chars = format === '24h' ? 8 : 11;
-  const fontSize = box.w ? Math.max(40, Math.min(box.w / (chars * WIDTH_PER_CHAR), box.h * 0.82)) : 72;
+  const fontSize = box.w ? Math.max(40, Math.min(box.w / (chars * WIDTH_PER_CHAR), box.h * HEIGHT_SHARE)) : 72;
 
   const onLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -46,6 +50,8 @@ export function BigClock({ snapshot, format, onToggle }: Props) {
         <Text
           style={[styles.clock, type.tabular, { fontSize, lineHeight: fontSize * 1.08 }]}
           numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
           allowFontScaling={false}
           accessible={false}>
           {text}

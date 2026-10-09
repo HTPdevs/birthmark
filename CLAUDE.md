@@ -70,7 +70,7 @@ Persistence:
 - Exclude session data from OS cloud backups.
 
 UI:
-- Landscape default; 60/40 split (clock + capture left, live status right).
+- Landscape default; 65/35 split (clock + capture left, live status right). The spec says 60/40; widened at the operator's request for a bigger clock.
 - Milestone row order is exact: ROM, Crown, Head, Body, First Cry. After First Cry: Separation Gush, Placenta plus "All milestones". Buttons share the row width so all fit without sliding (`milestoneRowLayout` in `src/ui/milestoneLayout.ts`); the row scrolls only if that would drop a button below `TOUCH`. Swipes must never capture.
 - Resuscitate and APGAR are dedicated large buttons below the row, not row entries. Resuscitate records the milestone (warning color); APGAR opens an editor, not a moment. The recording screen has no Mark moment / Other, Session elapsed, Recording to, or Events control; `controller.markMoment` and event code stay in the domain.
 - Clock tap toggles 24h/12h display only; reports stay 24h.

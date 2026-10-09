@@ -12,7 +12,15 @@ import {
   momentName,
   sortByEffective,
 } from '../domain/timeline';
-import type { AssessmentPoint, ElapsedMs, Moment, RevisionAction, SessionData, WallMs } from '../domain/types';
+import {
+  type AssessmentPoint,
+  type ElapsedMs,
+  type Moment,
+  type RevisionAction,
+  type SessionData,
+  type WallMs,
+  milestoneLabel,
+} from '../domain/types';
 
 export type TimelineRow = {
   momentId: string;
@@ -23,6 +31,25 @@ export type TimelineRow = {
   interval: string;
   group: string;
   flags: string[];
+  isSystem: boolean;
+  /** On-screen "Elapsed time" cell: "Crown to Head", "Start to Crown", or the label for system rows. */
+  span: string;
+  /** Time from the previous included record (or session start for the first one) to this one. */
+  spanElapsed: string;
+  /** On-screen "Notes" cell: a milestone's label, then its flags. */
+  notes: string[];
+};
+
+/** One row of the on-screen timeline table, which opens with the session start. */
+export type ScreenTimelineRow = {
+  key: string;
+  index: number;
+  span: string;
+  time: string;
+  elapsed: string;
+  notes: string;
+  /** Null for the Start time row, which is not a record and cannot be edited. */
+  momentId: string | null;
   isSystem: boolean;
 };
 
@@ -113,6 +140,16 @@ export function buildReport(data: SessionData, generatedAt: WallMs, nowElapsed: 
   };
 
   const sorted = sortByEffective(data.moments);
+  // Span names drop a milestone's label (it goes in Notes) so "Crown to Head" stays short.
+  const spanName = (m: Moment) =>
+    m.kind === 'milestone' && m.milestoneCode ? milestoneLabel(m.milestoneCode) : momentName(m, data.events);
+  const previousIncluded = new Map<string, Moment | null>();
+  let lastSeen: Moment | null = null;
+  for (const m of sorted) {
+    if (!isIncluded(m)) continue;
+    previousIncluded.set(m.id, lastSeen);
+    lastSeen = m;
+  }
   const toRow = (m: Moment): TimelineRow => {
     const flags: string[] = [];
     if (m.source === 'manual') flags.push('Manual');
@@ -122,16 +159,25 @@ export function buildReport(data: SessionData, generatedAt: WallMs, nowElapsed: 
     if (m.flaggedAccidental) flags.push('Accidental tap');
     flags.push(...(flagsByMoment.get(m.id) ?? []));
     const interval = intervals.get(m.id);
+    const label = momentName(m, data.events);
+    const included = isIncluded(m);
+    const prev = previousIncluded.get(m.id) ?? null;
+    const notes = m.kind === 'milestone' && m.label?.trim() ? [m.label.trim(), ...flags] : flags;
     return {
       momentId: m.id,
       sequence: m.captureSequence,
-      label: momentName(m, data.events),
+      label,
       time: formatTimestamp(effectiveWall(m), effectiveOffset(m, off0), sessionDate, off0),
       elapsed: formatElapsed(effectiveElapsed(m)),
       interval: interval == null ? DASH : formatElapsed(interval),
       group: groupName(m),
       flags,
       isSystem: !(m.kind === 'capture' || m.kind === 'milestone'),
+      span: !included ? label : `${prev ? spanName(prev) : 'Start'} to ${spanName(m)}`,
+      spanElapsed: !included
+        ? DASH
+        : formatElapsed(prev ? effectiveElapsed(m) - effectiveElapsed(prev) : effectiveElapsed(m)),
+      notes,
     };
   };
 
@@ -143,7 +189,9 @@ export function buildReport(data: SessionData, generatedAt: WallMs, nowElapsed: 
     const m = data.moments.find((x) => x.id === row.momentId);
     if (m?.kind !== 'resume') continue;
     const priorFinish = sorted.filter((x) => x.kind === 'finish' && effectiveElapsed(x) <= effectiveElapsed(m)).pop();
-    if (priorFinish) row.label = `Resumed after finish (gap ${formatElapsed(effectiveElapsed(m) - effectiveElapsed(priorFinish))})`;
+    if (!priorFinish) continue;
+    row.label = `Resumed after finish (gap ${formatElapsed(effectiveElapsed(m) - effectiveElapsed(priorFinish))})`;
+    row.span = row.label;
   }
 
   const end = session.finishSnapshot;
@@ -261,6 +309,26 @@ export function buildReport(data: SessionData, generatedAt: WallMs, nowElapsed: 
     changeHistory,
     footer: REPORT_FOOTER,
   };
+}
+
+/**
+ * Rows for the on-screen timeline table: a Start time row, then every timeline
+ * row numbered from 2. The PDF keeps capture sequence numbers instead.
+ */
+export function screenTimeline(r: ReportModel): ScreenTimelineRow[] {
+  return [
+    { key: 'start', index: 1, span: 'Start time', time: r.header.startTime, elapsed: DASH, notes: '', momentId: null, isSystem: true },
+    ...r.timeline.map((row, i) => ({
+      key: row.momentId,
+      index: i + 2,
+      span: row.span,
+      time: row.time,
+      elapsed: row.spanElapsed,
+      notes: row.notes.join(', '),
+      momentId: row.isSystem ? null : row.momentId,
+      isSystem: row.isSystem,
+    })),
+  ];
 }
 
 /** Birthmark_2026-10-07_142208_AB12_r3.pdf */

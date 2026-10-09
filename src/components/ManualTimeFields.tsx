@@ -1,30 +1,10 @@
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
-import type { ManualTimeInput } from '../domain/manualTime';
-import { formatOffset, parseOffset } from '../domain/time';
 import { Button } from '../ui/Button';
+import type { ManualTimeDraft } from '../ui/manualTimeDraft';
 import { colors, radius, space } from '../ui/theme';
 
-export type ManualTimeDraft = {
-  mode: 'elapsed' | 'clock';
-  elapsed: string;
-  date: string;
-  time: string;
-  offset: string;
-};
-
-export function draftToInput(d: ManualTimeDraft): ManualTimeInput | { error: string } {
-  if (d.mode === 'elapsed') return { mode: 'elapsed', elapsed: d.elapsed };
-  const offsetMinutes = parseOffset(d.offset);
-  if (offsetMinutes === null) return { error: 'Enter the UTC offset as +HH:MM or -HH:MM.' };
-  return { mode: 'clock', date: d.date, time: d.time, offsetMinutes };
-}
-
-export function initialDraft(date: string, time: string, elapsed: string, offsetMinutes: number): ManualTimeDraft {
-  return { mode: 'elapsed', elapsed, date, time, offset: formatOffset(offsetMinutes).replace('UTC', '') };
-}
-
-/** Elapsed time, or a local date + 24-hour time with an explicit UTC offset. */
+/** Elapsed time, or a local date + 24-hour time in the device time zone. */
 export function ManualTimeFields({ draft, onChange }: { draft: ManualTimeDraft; onChange: (d: ManualTimeDraft) => void }) {
   return (
     <View style={styles.wrap}>
@@ -41,19 +21,23 @@ export function ManualTimeFields({ draft, onChange }: { draft: ManualTimeDraft; 
         />
       </View>
       {draft.mode === 'elapsed' ? (
-        <Field label="Elapsed (HH:mm:ss)" value={draft.elapsed} onChange={(elapsed) => onChange({ ...draft, elapsed })} />
+        <Field
+          label="Time elapsed:"
+          a11y="Time elapsed, hours minutes seconds"
+          value={draft.elapsed}
+          onChange={(elapsed) => onChange({ ...draft, elapsed })}
+        />
       ) : (
         <View style={styles.row}>
-          <Field label="Date (YYYY-MM-DD)" value={draft.date} onChange={(date) => onChange({ ...draft, date })} />
-          <Field label="Time, 24h (HH:mm:ss)" value={draft.time} onChange={(time) => onChange({ ...draft, time })} />
-          <Field label="UTC offset" value={draft.offset} onChange={(offset) => onChange({ ...draft, offset })} />
+          <Field label="Date" a11y="Date, month day year" value={draft.date} onChange={(date) => onChange({ ...draft, date })} />
+          <Field label="Time (24hr)" a11y="Time, 24 hour" value={draft.time} onChange={(time) => onChange({ ...draft, time })} />
         </View>
       )}
     </View>
   );
 }
 
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function Field({ label, a11y, value, onChange }: { label: string; a11y: string; value: string; onChange: (v: string) => void }) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -64,7 +48,7 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
         autoCorrect={false}
         autoCapitalize="none"
         keyboardType="numbers-and-punctuation"
-        accessibilityLabel={label}
+        accessibilityLabel={a11y}
       />
     </View>
   );
