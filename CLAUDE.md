@@ -71,8 +71,9 @@ Persistence:
 
 UI:
 - Landscape default; 60/40 split (clock + capture left, live status right).
-- Milestone order is exact: ROM, Crown, Head, Body, First Cry, Resuscitate, APGAR. After First Cry: Separation Gush, Placenta, APGAR plus "All milestones". Swipes must never capture. APGAR opens an editor, not a moment.
+- Milestone row order is exact: ROM, Crown, Head, Body, First Cry. After First Cry: Separation Gush, Placenta plus "All milestones". Buttons share the row width so all fit without sliding (`milestoneRowLayout` in `src/ui/milestoneLayout.ts`); the row scrolls only if that would drop a button below `TOUCH`. Swipes must never capture.
+- Resuscitate and APGAR are dedicated large buttons below the row, not row entries. Resuscitate records the milestone (warning color); APGAR opens an editor, not a moment. The recording screen has no Mark moment / Other, Session elapsed, Recording to, or Events control; `controller.markMoment` and event code stay in the domain.
 - Clock tap toggles 24h/12h display only; reports stay 24h.
 - Emergency asks for confirmation, then `Linking.openURL("tel:911")` through `PhoneAdapter`. Creates no moment. Never place a real 911 call in dev or tests; inject a mock adapter.
 - Labels max 80 chars, with the no-identifying-details guidance. Never claim anonymity or HIPAA approval.
-- Palette (brand kit in `assets/README.txt`): Espresso `#3B2A24` primary text, Sage `#8FA89A` dividers (never text), Cream `#FAF3EC` background, Coral `#E8775A` emergency/accents (with espresso text), Rust `#B4472C` errors, `#6B5C56` secondary text. Use the role tokens in `src/ui/theme.ts`; no hex literals elsewhere (`tests/palette.test.ts` enforces it).
+- Palette (brand kit in `assets/README.txt`): Espresso `#3B2A24` primary text, Sage `#8FA89A` dividers (never text), Cream `#FAF3EC` background, Coral `#E8775A` emergency/accents (with espresso text), Rust `#B4472C` errors and the Resuscitate fill (`colors.warning`, cream text), `#6B5C56` secondary text. Use the role tokens in `src/ui/theme.ts`; no hex literals elsewhere (`tests/palette.test.ts` enforces it).

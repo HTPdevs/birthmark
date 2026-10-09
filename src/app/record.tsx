@@ -9,7 +9,6 @@ import { ApgarEditor } from '../components/ApgarEditor';
 import { BigClock } from '../components/BigClock';
 import { CaptureBar } from '../components/CaptureBar';
 import { EmergencyControl } from '../components/EmergencyControl';
-import { EventsDrawer } from '../components/EventsDrawer';
 import { LiveStatusPanel } from '../components/LiveStatusPanel';
 import { MilestoneRow } from '../components/MilestoneRow';
 import { SaveStatus } from '../components/SaveStatus';
@@ -37,7 +36,6 @@ function Recording({ controller }: { controller: SessionController }) {
   const state = useControllerState(controller);
   const { clockFormat } = useAppState();
   const snapshot = useClockTick();
-  const [eventsOpen, setEventsOpen] = useState(false);
   const [apgarOpen, setApgarOpen] = useState(false);
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [finishing, setFinishing] = useState(false);
@@ -114,11 +112,11 @@ function Recording({ controller }: { controller: SessionController }) {
           <View style={styles.topBar}>
             <SaveStatus queue={state.queue} onRetry={() => controller.retry()} />
             <Button
-              label={activeEvents.length ? `Events (${activeEvents.length})` : 'Events'}
-              onPress={() => setEventsOpen(true)}
-              accessibilityHint="Start, select, or end event timers"
+              label="Finish"
+              variant="primary"
+              onPress={() => setConfirmFinish(true)}
+              accessibilityHint="Asks before finishing"
             />
-            <Button label="Finish" onPress={() => setConfirmFinish(true)} accessibilityHint="Asks before finishing" />
           </View>
           <LiveStatusPanel moments={data.moments} events={data.events} format={clockFormat} />
           <View style={styles.emergency}>
@@ -127,7 +125,6 @@ function Recording({ controller }: { controller: SessionController }) {
         </View>
       </KeyboardAvoidingView>
 
-      <EventsDrawer controller={controller} visible={eventsOpen} nowElapsed={elapsed} onClose={() => setEventsOpen(false)} />
       <ApgarEditor controller={controller} visible={apgarOpen} onClose={() => setApgarOpen(false)} />
       <ConfirmDialog
         visible={confirmFinish}
