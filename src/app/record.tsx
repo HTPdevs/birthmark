@@ -20,7 +20,7 @@ import type { MilestoneCode, RowMilestoneCode } from '../domain/types';
 import { appStore, useAppState, useClockTick, useControllerState } from '../state/store';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { recordingBands, sinceTimerFonts } from '../ui/milestoneLayout';
+import { BOTTOM_ROW_HEIGHT, recordingBands, sinceTimerFonts } from '../ui/milestoneLayout';
 import { colors, space, type } from '../ui/theme';
 
 export default function RecordScreen() {
@@ -45,6 +45,8 @@ function Recording({ controller }: { controller: SessionController }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   // Fitted clock font, so "Time since" scales with it and never outgrows it.
   const [clockFont, setClockFont] = useState(72);
+  // Measured "Time since" box, so its fonts are fitted to it (see sinceTimerFonts).
+  const [sinceBox, setSinceBox] = useState({ width: 0, height: 0 });
   const keyboardUp = useKeyboardVisible();
 
   const { data } = state;
@@ -69,7 +71,8 @@ function Recording({ controller }: { controller: SessionController }) {
   const sinceHeading = sinceLastHeading(data.moments, data.events);
   const target = state.labelTargetId ? data.moments.find((m) => m.id === state.labelTargetId) ?? null : null;
   const bands = recordingBands(target !== null);
-  const since = sinceTimerFonts(clockFont);
+  const sinceValue = sinceLast === null ? '—' : formatElapsed(sinceLast);
+  const since = sinceTimerFonts(clockFont, { ...sinceBox, label: sinceHeading, value: sinceValue });
 
   const milestone = (code: RowMilestoneCode | Extract<MilestoneCode, 'RESUSCITATE'>) => {
     controller.markMilestone(code);
@@ -118,35 +121,36 @@ function Recording({ controller }: { controller: SessionController }) {
           </View>
         </View>
 
+        {/* Under the clock: "Time since" (and the label box when a capture
+            needs one) on the left, the latest capture on the right. */}
         <View style={[styles.row, { flex: bands.body }]}>
           <View style={styles.left}>
             <View
-              style={keyboardUp ? styles.hidden : undefined}
+              style={[styles.sinceBox, keyboardUp && styles.hidden]}
+              onLayout={(e) => {
+                const width = Math.floor(e.nativeEvent.layout.width);
+                const height = Math.floor(e.nativeEvent.layout.height);
+                if (Math.abs(width - sinceBox.width) > 1 || Math.abs(height - sinceBox.height) > 1) {
+                  setSinceBox({ width, height });
+                }
+              }}
               accessible
-              accessibilityLabel={`${sinceHeading} ${sinceLast === null ? 'none' : formatElapsed(sinceLast)}`}>
+              accessibilityLabel={`${sinceHeading} ${sinceLast === null ? 'none' : sinceValue}`}>
+              {/* Sized by sinceTimerFonts, not adjustsFontSizeToFit, which on
+                  iOS collapsed the value to a few points in this flex box. */}
               <Text
                 style={[styles.timerLabel, { fontSize: since.label, lineHeight: Math.round(since.label * 1.2) }]}
                 numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.6}
                 maxFontSizeMultiplier={1}>
                 {sinceHeading}
               </Text>
               <Text
                 style={[styles.timerValue, type.tabular, { fontSize: since.value, lineHeight: Math.round(since.value * 1.1) }]}
                 numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.6}
                 maxFontSizeMultiplier={1}>
-                {sinceLast === null ? '—' : formatElapsed(sinceLast)}
+                {sinceValue}
               </Text>
             </View>
-            <MilestoneRow
-              mode={state.rowMode}
-              onCapture={milestone}
-              onApgar={() => setApgarOpen(true)}
-              onShowAll={() => controller.showAllMilestones()}
-            />
             <CaptureBar
               target={target}
               targetSave={target ? state.saveStates[target.id] : undefined}
@@ -164,16 +168,29 @@ function Recording({ controller }: { controller: SessionController }) {
               onEdit={setEditingId}
               onDelete={(id) => controller.setAccidental(id, true, null)}
             />
-            <View style={styles.actions}>
-              <ActionTile
-                label="Resuscitate"
-                variant="warning"
-                onPress={() => milestone('RESUSCITATE')}
-                accessibilityHint="Records the Resuscitate milestone now"
-                testID="resuscitate"
-              />
-              <EmergencyControl style={styles.emergency} />
-            </View>
+          </View>
+        </View>
+
+        {/* Bottom row: milestone buttons inline with Resuscitate and Emergency,
+            on the same 65/35 split so the column divider runs straight down. */}
+        <View style={[styles.row, styles.bottom]}>
+          <View style={[styles.left, styles.bottomLeft]}>
+            <MilestoneRow
+              mode={state.rowMode}
+              onCapture={milestone}
+              onApgar={() => setApgarOpen(true)}
+              onShowAll={() => controller.showAllMilestones()}
+            />
+          </View>
+          <View style={[styles.right, styles.actions]}>
+            <ActionTile
+              label="Resuscitate"
+              variant="warning"
+              onPress={() => milestone('RESUSCITATE')}
+              accessibilityHint="Records the Resuscitate milestone now"
+              testID="resuscitate"
+            />
+            <EmergencyControl style={styles.emergency} />
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -204,7 +221,7 @@ const styles = StyleSheet.create({
   finishingTitle: { fontSize: 28, fontWeight: '800', color: colors.ink },
   finishingBody: { fontSize: 18, color: colors.slate, textAlign: 'center', maxWidth: 560 },
   column: { flex: 1 },
-  // flex comes from recordingBands(): 1 of 3 normally, 1 of 5 while the label box shows.
+  // flex comes from recordingBands(): half normally, a quarter while the label box shows.
   clockBand: {
     flexDirection: 'row',
     gap: space.md,
@@ -216,7 +233,7 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row' },
   // Wider than the spec's 60/40 at the operator's request: bigger capture
-  // buttons, a narrower recorded list.
+  // buttons, a narrower recorded column. Shared by the middle and bottom rows.
   left: { flex: 65, paddingHorizontal: space.lg, paddingVertical: space.sm, gap: space.sm },
   right: {
     flex: 35,
@@ -226,11 +243,16 @@ const styles = StyleSheet.create({
     paddingVertical: space.sm,
     gap: space.sm,
   },
+  // Fills the left column above the label box; sinceTimerFonts() fits the text to it.
+  sinceBox: { flex: 1, justifyContent: 'center' },
+  // Fixed height: the milestone buttons and action tiles at MILESTONE_BUTTON_HEIGHT.
+  bottom: { height: BOTTOM_ROW_HEIGHT },
+  bottomLeft: { justifyContent: 'center' },
   // Sizes come from sinceTimerFonts(); these are the static parts.
   timerLabel: { fontWeight: '700', color: colors.slate, textTransform: 'uppercase', letterSpacing: 0.5 },
   timerValue: { fontWeight: '800', color: colors.ink },
   clockSide: { justifyContent: 'flex-end', alignItems: 'flex-end', gap: space.xs },
-  actions: { flexDirection: 'row', gap: space.sm, alignItems: 'stretch' },
+  actions: { flexDirection: 'row', alignItems: 'stretch' },
   emergency: { flex: 1 },
   hidden: { display: 'none' },
 });

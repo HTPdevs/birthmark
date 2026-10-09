@@ -1,13 +1,20 @@
 import { FULL_ROW, POST_FIRST_CRY_ROW } from '@/domain/types';
 import {
+  BOTTOM_ROW_HEIGHT,
   MILESTONE_BUTTON_HEIGHT,
   SCROLL_BUTTON_WIDTH,
   SINCE_VALUE_MAX,
   SINCE_VALUE_MIN,
+  SINCE_LABEL_EM,
+  SINCE_LABEL_LETTER_SPACING,
+  SINCE_LABEL_SQUEEZED_MIN,
+  SINCE_VALUE_EM,
+  SINCE_VALUE_SQUEEZED_MIN,
   milestoneRowItems,
   milestoneRowLayout,
   recordingBands,
   sinceTimerFonts,
+  sinceTimerHeight,
 } from '@/ui/milestoneLayout';
 import { TOUCH, space } from '@/ui/theme';
 
@@ -94,30 +101,62 @@ describe('milestone row items (L04, L06)', () => {
 });
 
 describe('recording screen bands', () => {
-  it('the clock takes a third of the height normally', () => {
+  it('the clock takes half the height above the bottom row normally', () => {
     const { clock, body } = recordingBands(false);
-    expect(clock / (clock + body)).toBeCloseTo(1 / 3);
+    expect(clock / (clock + body)).toBeCloseTo(1 / 2);
   });
 
-  it('gives the clock a fifth while the label box shows', () => {
+  it('gives the clock a quarter while the label box shows', () => {
     const { clock, body } = recordingBands(true);
-    expect(clock / (clock + body)).toBeCloseTo(1 / 5);
+    expect(clock / (clock + body)).toBeCloseTo(1 / 4);
   });
 
-  it('milestone buttons are back to their original 64pt height', () => {
+  it('milestone buttons stay at their original 64pt height', () => {
     expect(MILESTONE_BUTTON_HEIGHT).toBe(64);
   });
 
-  it.each([false, true])('a 390pt phone (369 usable) fits the full-height row (label box shown: %s)', (labelBox) => {
-    // Body minus vertical padding, "Time since" at the clock font the band allows, label box ~94, gaps.
-    const usable = 369;
+  it('the bottom row is the milestone height plus 8pt padding above and below', () => {
+    expect(BOTTOM_ROW_HEIGHT).toBe(MILESTONE_BUTTON_HEIGHT + 16);
+  });
+
+  // Phone landscape heights: iPhone SE (375 - no insets), 390pt notched phone
+  // (369 after the home indicator), and a tablet.
+  const LABEL_BOX = 94; // meta line, 48pt input, guidance, gaps
+  const LATEST = 24 + 46 + 18; // name, captured time, "Since ..." line
+  const geometry = (usable: number, labelBox: boolean) => {
     const { clock, body } = recordingBands(labelBox);
-    const clockFont = ((usable * clock) / (clock + body)) * 0.9;
-    const bodyHeight = (usable * body) / (clock + body) - 16;
-    const f = sinceTimerFonts(clockFont);
-    const timer = Math.round(f.label * 1.2) + Math.round(f.value * 1.1);
-    const labelHeight = labelBox ? 94 + 8 : 0;
-    expect(bodyHeight - timer - 8 - labelHeight).toBeGreaterThanOrEqual(MILESTONE_BUTTON_HEIGHT);
+    const above = usable - BOTTOM_ROW_HEIGHT;
+    const clockBand = (above * clock) / (clock + body);
+    const middle = (above * body) / (clock + body) - 16; // middle row vertical padding
+    // BigClock: band minus its 8pt padding, font is 90% of that (width rarely binds on phones).
+    const clockFont = Math.max(40, (clockBand - 16) * 0.9);
+    return { clockFont, middle };
+  };
+
+  it.each([
+    [375, false],
+    [369, false],
+    [369, true],
+    [744, false],
+    [744, true],
+  ] as const)('%ipt usable (label box %s): "Time since", label box and latest capture fit', (usable, labelBox) => {
+    const { clockFont, middle } = geometry(usable, labelBox);
+    const sinceBox = middle - (labelBox ? LABEL_BOX + 8 : 0);
+    const fonts = sinceTimerFonts(clockFont, { height: sinceBox });
+    expect(sinceTimerHeight(fonts)).toBeLessThanOrEqual(sinceBox);
+    expect(fonts.value).toBeGreaterThanOrEqual(SINCE_VALUE_SQUEEZED_MIN);
+    expect(middle).toBeGreaterThanOrEqual(LATEST);
+  });
+
+  it('a 369pt phone without the label box needs no squeeze: the timer is its unclamped size', () => {
+    const { clockFont, middle } = geometry(369, false);
+    expect(sinceTimerFonts(clockFont, { height: middle })).toEqual(sinceTimerFonts(clockFont));
+  });
+
+  it('the clock band is taller than the old third of the full height on a 369pt phone', () => {
+    const { clockFont } = geometry(369, false);
+    const oldBand = 369 / 3;
+    expect((clockFont / 0.9) + 16).toBeGreaterThan(oldBand);
   });
 });
 
@@ -136,6 +175,63 @@ describe('"Time since" font sizes', () => {
   it('keeps the floor when the clock allows it and caps on tablets', () => {
     expect(sinceTimerFonts(72).value).toBe(SINCE_VALUE_MIN);
     expect(sinceTimerFonts(230)).toEqual({ label: 36, value: SINCE_VALUE_MAX });
+  });
+
+  it('shrinks the value to fit a measured box, never below the squeezed floor', () => {
+    const unclamped = sinceTimerFonts(160);
+    expect(sinceTimerHeight(unclamped)).toBeGreaterThan(100);
+    const fitted = sinceTimerFonts(160, { height: 100 });
+    expect(sinceTimerHeight(fitted)).toBeLessThanOrEqual(100);
+    expect(fitted.value).toBeLessThan(unclamped.value);
+    // One more point would not fit (the largest value that fits is chosen).
+    const next = { value: fitted.value + 1, label: Math.round(Math.min(Math.max((fitted.value + 1) * 0.4, 16), 36)) };
+    expect(sinceTimerHeight(next)).toBeGreaterThan(100);
+    expect(sinceTimerFonts(160, { height: 10 }).value).toBe(SINCE_VALUE_SQUEEZED_MIN);
+  });
+
+  it('a box big enough changes nothing, and missing or bad sizes are ignored', () => {
+    const base = sinceTimerFonts(100);
+    expect(sinceTimerFonts(100, { height: 500, width: 2000, label: 'TIME SINCE HEAD', value: '00:00:05' })).toEqual(base);
+    expect(sinceTimerFonts(100, { height: 0, width: 0 })).toEqual(base);
+    expect(sinceTimerFonts(100, { height: Number.NaN, width: Number.NaN, label: 'x'.repeat(80) })).toEqual(base);
+  });
+
+  // Estimated rendered widths, using the same per-character factors.
+  const valueWidth = (size: number, text: string) => size * Math.max(text.length, 8) * SINCE_VALUE_EM;
+  const labelWidth = (size: number, text: string) =>
+    text.length * (size * SINCE_LABEL_EM + SINCE_LABEL_LETTER_SPACING);
+
+  it.each([
+    [160, 300, '00:00:05'],
+    [160, 450, '00:00:05'],
+    [230, 450, '123:45:06'], // elapsed can pass 99 hours
+    [100, 260, '00:00:05'],
+  ])('clock %ipt in a %ipt-wide box: value %s fits the width', (clock, width, value) => {
+    const f = sinceTimerFonts(clock, { width, value });
+    expect(valueWidth(f.value, value)).toBeLessThanOrEqual(width);
+  });
+
+  it('never squeezes the value below its floor, even in a very narrow box', () => {
+    expect(sinceTimerFonts(160, { width: 50, value: '00:00:05' }).value).toBe(SINCE_VALUE_SQUEEZED_MIN);
+  });
+
+  it('a long heading shrinks the label only, to fit the width', () => {
+    const label = 'TIME SINCE SEPARATION GUSH';
+    const plain = sinceTimerFonts(160, { width: 450, value: '00:00:05' });
+    const long = sinceTimerFonts(160, { width: 450, value: '00:00:05', label });
+    expect(long.value).toBe(plain.value);
+    expect(long.label).toBeLessThan(plain.label);
+    expect(labelWidth(long.label, label)).toBeLessThanOrEqual(450);
+    expect(sinceTimerFonts(160, { width: 100, label }).label).toBe(SINCE_LABEL_SQUEEZED_MIN);
+  });
+
+  it('fits width and height together on the measured iPhone box (451 x 126)', () => {
+    const box = { width: 451, height: 126, label: 'TIME SINCE HEAD', value: '00:00:05' };
+    const f = sinceTimerFonts(128.4, box);
+    expect(f).toEqual({ label: 31, value: 77 });
+    expect(sinceTimerHeight(f)).toBeLessThanOrEqual(box.height);
+    expect(valueWidth(f.value, box.value)).toBeLessThanOrEqual(box.width);
+    expect(labelWidth(f.label, box.label)).toBeLessThanOrEqual(box.width);
   });
 
   it('falls back to a default clock size for bad input', () => {
