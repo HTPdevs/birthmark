@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'rea
 
 import { TOUCH, colors, radius, space } from './theme';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'emergency' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'emergency' | 'danger' | 'warning';
 
 type Props = {
   label: string;
@@ -70,6 +70,7 @@ const styles = StyleSheet.create({
   ghost: { backgroundColor: 'transparent', borderColor: 'transparent' },
   emergency: { backgroundColor: colors.accent, borderColor: colors.accent },
   danger: { backgroundColor: colors.paper, borderColor: colors.danger },
+  warning: { backgroundColor: colors.warning, borderColor: colors.warning },
   large: { minHeight: 72, paddingHorizontal: space.xl },
   disabled: { opacity: 0.45 },
   pressed: { opacity: 0.7 },
@@ -83,4 +84,5 @@ const textStyles = StyleSheet.create({
   ghost: { color: colors.slate },
   emergency: { color: colors.onAccent },
   danger: { color: colors.danger },
+  warning: { color: colors.paper },
 });

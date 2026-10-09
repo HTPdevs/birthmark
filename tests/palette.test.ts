@@ -53,12 +53,17 @@ describe('brand palette', () => {
     ['slate on white (PDF)', colors.slate, WHITE],
     ['onAccent on accent (emergency)', colors.onAccent, colors.accent],
     ['danger on paper', colors.danger, colors.paper],
+    ['paper on warning (Resuscitate)', colors.paper, colors.warning],
     ['danger on dangerSurface (Not saved)', colors.danger, colors.dangerSurface],
     ['success on paper (Saved)', colors.success, colors.paper],
   ];
 
   it.each(textPairs)('%s meets WCAG AA (4.5:1)', (_name, fg, bg) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(AA_TEXT);
+  });
+
+  it('warning is the brand rust (Resuscitate)', () => {
+    expect(colors.warning).toBe(brand.rust);
   });
 
   it('sage is never used as a text color', () => {

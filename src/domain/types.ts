@@ -70,16 +70,16 @@ export const MILESTONES = [
 
 export type MilestoneCode = (typeof MILESTONES)[number]['code'];
 
-export const FULL_ROW: MilestoneCode[] = [
-  'ROM',
-  'CROWN',
-  'HEAD',
-  'BODY',
-  'FIRST_CRY',
-  'RESUSCITATE',
-  'APGAR',
-];
-export const POST_FIRST_CRY_ROW: MilestoneCode[] = ['SEPARATION_GUSH', 'PLACENTA', 'APGAR'];
+/**
+ * Milestones with a dedicated button on the recording screen instead of a slot in
+ * the swipe row. Resuscitate records a moment; APGAR opens the score editor.
+ */
+export type DedicatedMilestoneCode = 'RESUSCITATE' | 'APGAR';
+/** Codes that can appear in the milestone row. Every one records a moment. */
+export type RowMilestoneCode = Exclude<MilestoneCode, DedicatedMilestoneCode>;
+
+export const FULL_ROW: RowMilestoneCode[] = ['ROM', 'CROWN', 'HEAD', 'BODY', 'FIRST_CRY'];
+export const POST_FIRST_CRY_ROW: RowMilestoneCode[] = ['SEPARATION_GUSH', 'PLACENTA'];
 
 export function milestoneLabel(code: MilestoneCode): string {
   return MILESTONES.find((m) => m.code === code)?.label ?? code;

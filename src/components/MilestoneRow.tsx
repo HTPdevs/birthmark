@@ -11,13 +11,12 @@ import {
 } from 'react-native';
 
 import type { RowMode } from '../domain/timeline';
-import { FULL_ROW, type MilestoneCode, POST_FIRST_CRY_ROW, milestoneLabel } from '../domain/types';
+import { FULL_ROW, POST_FIRST_CRY_ROW, type RowMilestoneCode, milestoneLabel } from '../domain/types';
 import { TOUCH, colors, radius, space } from '../ui/theme';
 
 type Props = {
   mode: RowMode;
-  onCapture: (code: Exclude<MilestoneCode, 'APGAR'>) => void;
-  onApgar: () => void;
+  onCapture: (code: RowMilestoneCode) => void;
   onShowAll: () => void;
 };
 
@@ -26,9 +25,10 @@ const VISIBLE_BUTTONS = 4.4;
 
 /**
  * Horizontally swipeable milestone buttons. A drag scrolls the row and cancels
- * the press, so swiping never captures.
+ * the press, so swiping never captures. Resuscitate and APGAR have their own
+ * buttons on the recording screen, so every button here records a moment.
  */
-export function MilestoneRow({ mode, onCapture, onApgar, onShowAll }: Props) {
+export function MilestoneRow({ mode, onCapture, onShowAll }: Props) {
   const [width, setWidth] = useState(0);
   const [atEnd, setAtEnd] = useState(false);
   const codes = mode === 'all' ? FULL_ROW : POST_FIRST_CRY_ROW;
@@ -53,17 +53,12 @@ export function MilestoneRow({ mode, onCapture, onApgar, onShowAll }: Props) {
         {codes.map((code) => (
           <Pressable
             key={code}
-            onPress={() => (code === 'APGAR' ? onApgar() : onCapture(code))}
+            onPress={() => onCapture(code)}
             accessibilityRole="button"
             accessibilityLabel={milestoneLabel(code)}
-            accessibilityHint={code === 'APGAR' ? 'Opens APGAR scores. Does not record a time.' : 'Records this milestone now'}
-            style={({ pressed }) => [
-              styles.button,
-              code === 'APGAR' && styles.apgar,
-              { width: buttonWidth },
-              pressed && styles.pressed,
-            ]}>
-            <Text style={[styles.label, code === 'APGAR' && styles.apgarLabel]} numberOfLines={2} maxFontSizeMultiplier={1.4}>
+            accessibilityHint="Records this milestone now"
+            style={({ pressed }) => [styles.button, { width: buttonWidth }, pressed && styles.pressed]}>
+            <Text style={styles.label} numberOfLines={2} maxFontSizeMultiplier={1.4}>
               {milestoneLabel(code)}
             </Text>
           </Pressable>
@@ -100,11 +95,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: space.sm,
   },
-  apgar: { backgroundColor: colors.paper, borderWidth: 2, borderColor: colors.ink },
   allButton: { backgroundColor: colors.paper, borderWidth: 2, borderColor: colors.line },
   pressed: { opacity: 0.65 },
   label: { color: colors.paper, fontSize: 19, fontWeight: '800', textAlign: 'center' },
-  apgarLabel: { color: colors.ink },
   allLabel: { color: colors.slate, fontSize: 16 },
   cue: {
     position: 'absolute',

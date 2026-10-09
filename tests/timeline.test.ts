@@ -2,6 +2,7 @@ import { CALL_FALLBACK_MESSAGE, type PhoneAdapter, requestEmergencyCall } from '
 import { deriveRowMode, liveStatus, sinceLastMoment, sortByEffective } from '@/domain/timeline';
 import {
   FULL_ROW,
+  MILESTONES,
   type Moment,
   POST_FIRST_CRY_ROW,
   continuousMs,
@@ -42,9 +43,24 @@ function moment(partial: Partial<Moment> & { elapsed: number }): Moment {
 }
 
 describe('milestone order (L04)', () => {
-  it('uses the exact spec order', () => {
-    expect(FULL_ROW.map(milestoneLabel)).toEqual(['ROM', 'Crown', 'Head', 'Body', 'First Cry', 'Resuscitate', 'APGAR']);
-    expect(POST_FIRST_CRY_ROW.map(milestoneLabel)).toEqual(['Separation Gush', 'Placenta', 'APGAR']);
+  it('uses the exact row order', () => {
+    expect(FULL_ROW.map(milestoneLabel)).toEqual(['ROM', 'Crown', 'Head', 'Body', 'First Cry']);
+    expect(POST_FIRST_CRY_ROW.map(milestoneLabel)).toEqual(['Separation Gush', 'Placenta']);
+  });
+
+  it('keeps Resuscitate and APGAR out of the swipe rows (they have dedicated buttons)', () => {
+    for (const row of [FULL_ROW, POST_FIRST_CRY_ROW]) {
+      expect(row).not.toContain('RESUSCITATE');
+      expect(row).not.toContain('APGAR');
+    }
+    expect(milestoneLabel('RESUSCITATE')).toBe('Resuscitate');
+    expect(milestoneLabel('APGAR')).toBe('APGAR');
+  });
+
+  it('leaves every milestone reachable from a row or a dedicated button', () => {
+    const dedicated = ['RESUSCITATE', 'APGAR'];
+    const reachable = new Set<string>([...FULL_ROW, ...POST_FIRST_CRY_ROW, ...dedicated]);
+    expect([...reachable].sort()).toEqual(MILESTONES.map((m) => m.code).sort());
   });
 });
 

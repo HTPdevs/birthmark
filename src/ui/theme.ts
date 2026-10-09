@@ -24,6 +24,8 @@ export const colors = {
   /** Muted surface: sage at 12% over cream. */
   mist: '#EDEAE2',
   danger: brand.rust,
+  /** Resuscitate button fill. Text on it is `paper`. */
+  warning: brand.rust,
   /** Failed-save pill: rust at 6% over cream. */
   dangerSurface: '#F6E9E0',
   success: '#2E6B3F',
