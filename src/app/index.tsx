@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ActiveSessionExistsError } from "../domain/sessionController";
@@ -10,8 +10,11 @@ import { appStore, useAppState } from "../state/store";
 import { Button } from "../ui/Button";
 import { colors, space } from "../ui/theme";
 
-// assets/lockup.png is 1969 x 588 px; keep that aspect ratio.
-const LOCKUP_HEIGHT = 64;
+// assets/lockup.png is 1969 x 588 px; keep that aspect ratio (112 x 375).
+// Height budget on a ~390pt landscape phone (21pt bottom inset): 24 + 24
+// padding, 3 x 16 gaps, tagline ~24, Start button 72, fine print ~60 leaves
+// ~120 for the lockup. The column scrolls when a warning or error adds rows.
+const LOCKUP_HEIGHT = 112;
 const LOCKUP_WIDTH = Math.round((LOCKUP_HEIGHT * 1969) / 588);
 
 export default function Home() {
@@ -47,7 +50,11 @@ export default function Home() {
       edges={["left", "right", "top", "bottom"]}
     >
       <View style={styles.body}>
-        <View style={styles.center}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.center}
+          alwaysBounceVertical={false}
+        >
           <View
             style={styles.lockup}
             accessible
@@ -93,7 +100,7 @@ export default function Home() {
               release build for accurate elapsed time through device sleep.
             </Text>
           ) : null}
-        </View>
+        </ScrollView>
         <View style={styles.topBar}>
           <Button
             label="History"
@@ -120,8 +127,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     paddingTop: space.sm,
   },
+  scroll: { flex: 1 },
+  // flexGrow, not flex: centers when the column fits, scrolls when it does not,
+  // so a short screen never clips the Start button.
   center: {
-    flex: 1,
+    flexGrow: 1,
     padding: space.xl,
     gap: space.lg,
     alignItems: "center",
