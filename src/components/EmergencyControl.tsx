@@ -14,6 +14,7 @@ import { appStore } from '../state/store';
 import type { IconName } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Sheet } from '../ui/Sheet';
+import { MILESTONE_BUTTON_HEIGHT } from '../ui/milestoneLayout';
 import { TOUCH, colors, radius, space } from '../ui/theme';
 
 type TileVariant = 'warning' | 'emergency';
@@ -23,7 +24,9 @@ type TileVariant = 'warning' | 'emergency';
  * where two actions share one row (Resuscitate and Emergency). A side-by-side
  * icon and label at 22pt does not fit a ~115pt slot on a landscape phone; stacked,
  * the label gets the full slot width and shrinks to fit rather than wrapping
- * mid-word. Fills its parent's height so both tiles in a row are equal.
+ * mid-word. Fills its parent's height so both tiles in a row are equal, and
+ * matches the milestone buttons' height so the recording screen's bottom row
+ * lines up.
  */
 export function ActionTile({
   label,
@@ -71,14 +74,14 @@ export function ActionTile({
 const tile = StyleSheet.create({
   base: {
     flex: 1,
-    minHeight: 72,
+    minHeight: MILESTONE_BUTTON_HEIGHT,
     minWidth: TOUCH,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
     paddingHorizontal: space.xs,
-    paddingVertical: space.sm,
+    paddingVertical: space.xs,
   },
   warning: { backgroundColor: colors.warning },
   emergency: { backgroundColor: colors.accent },

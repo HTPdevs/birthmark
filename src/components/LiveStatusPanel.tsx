@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { formatElapsed, formatTime12, formatTime24 } from '../domain/time';
 import { effectiveWall, liveStatus, momentName } from '../domain/timeline';
@@ -19,13 +19,13 @@ type Props = {
 };
 
 /**
- * Recorded milestone observations, newest at the bottom and most prominent.
- * Generic moments and event boundaries never replace the current milestone.
- * Tapping a row shows trash and pencil icons inline (no popup); tapping it
- * again hides them.
+ * The most recently recorded milestone only: its name, captured time, and the
+ * interval since the milestone before it. Earlier records are on History and
+ * the report, not here (operator decision, October 2026). Generic moments and
+ * event boundaries never replace the current milestone. Tapping it shows trash
+ * and pencil icons inline (no popup); tapping it again hides them.
  */
 export function LiveStatusPanel({ moments, events, format, onEdit, onDelete }: Props) {
-  const scroll = useRef<ScrollView>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const status = liveStatus(moments);
   const fmt = (m: Moment) => {
@@ -43,52 +43,15 @@ export function LiveStatusPanel({ moments, events, format, onEdit, onDelete }: P
     );
   }
 
-  const toggle = (id: string) => setSelectedId((cur) => (cur === id ? null : id));
-  const actions = (m: Moment) =>
-    selectedId === m.id ? (
-      <RowActions
-        name={momentName(m, events)}
-        onDelete={() => {
-          setSelectedId(null);
-          onDelete(m.id);
-        }}
-        onEdit={() => {
-          setSelectedId(null);
-          onEdit(m.id);
-        }}
-      />
-    ) : null;
-
   const current = status.current;
-  const earlier = status.history.slice(0, -1);
+  const selected = selectedId === current.id;
   return (
-    <ScrollView
-      ref={scroll}
-      style={styles.flex}
-      contentContainerStyle={styles.content}
-      onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: false })}>
-      {earlier.map((m) => (
-        <View key={m.id} style={styles.rowWrap}>
-          <Pressable
-            onPress={() => toggle(m.id)}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: selectedId === m.id }}
-            accessibilityLabel={`${momentName(m, events)} at ${fmt(m)}`}
-            accessibilityHint="Shows delete and edit"
-            style={({ pressed }) => [styles.prevRow, pressed && styles.pressed]}>
-            <Text style={styles.prevName} numberOfLines={1}>
-              {momentName(m, events)}
-            </Text>
-            <Text style={[styles.prevTime, type.tabular]}>{fmt(m)}</Text>
-          </Pressable>
-          {actions(m)}
-        </View>
-      ))}
-      <View style={[styles.rowWrap, styles.current]}>
+    <View style={styles.wrap}>
+      <View style={styles.rowWrap}>
         <Pressable
-          onPress={() => toggle(current.id)}
+          onPress={() => setSelectedId(selected ? null : current.id)}
           accessibilityRole="button"
-          accessibilityState={{ expanded: selectedId === current.id }}
+          accessibilityState={{ expanded: selected }}
           accessibilityLabel={`${momentName(current, events)} at ${fmt(current)}, latest milestone`}
           accessibilityHint="Shows delete and edit"
           style={({ pressed }) => [styles.flex, pressed && styles.pressed]}>
@@ -102,9 +65,21 @@ export function LiveStatusPanel({ moments, events, format, onEdit, onDelete }: P
             </Text>
           ) : null}
         </Pressable>
-        {actions(current)}
+        {selected ? (
+          <RowActions
+            name={momentName(current, events)}
+            onDelete={() => {
+              setSelectedId(null);
+              onDelete(current.id);
+            }}
+            onEdit={() => {
+              setSelectedId(null);
+              onEdit(current.id);
+            }}
+          />
+        ) : null}
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -132,22 +107,11 @@ function RowActions({ name, onDelete, onEdit }: { name: string; onDelete: () => 
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { flexGrow: 1, justifyContent: 'flex-end', gap: space.xs, paddingBottom: space.sm },
+  // Centered in the space between the clock band and the bottom row.
+  wrap: { flex: 1, justifyContent: 'center' },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: space.lg },
   emptyText: { color: colors.slate, fontSize: 16, textAlign: 'center' },
   rowWrap: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  prevRow: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: space.sm,
-    minHeight: 44,
-    borderRadius: radius.sm,
-  },
-  prevName: { color: colors.slate, fontSize: 15, flexShrink: 1 },
-  prevTime: { color: colors.slate, fontSize: 15 },
-  current: { borderTopWidth: 1, borderTopColor: colors.line, paddingTop: space.sm, marginTop: space.xs },
   // The captured time is the headline the moment a button is pressed; the name labels it.
   currentName: { color: colors.ink, fontSize: 20, fontWeight: '800' },
   currentTime: { color: colors.ink, fontSize: 40, lineHeight: 46, fontWeight: '800' },

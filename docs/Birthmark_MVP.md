@@ -59,6 +59,8 @@ A generic moment requires one tap from the recording screen. No typing or confir
 
 Recording-screen layout decision (product owner, October 2026): the recording screen has no Mark moment / Other button, no Session elapsed or Recording to display, and no Events button. Resuscitate and APGAR moved out of the milestone row into their own buttons. Generic captures and event timers remain in the session service, timeline, and report; where this document describes tapping Mark moment or opening Events on the recording screen, that control is not present. This decision takes precedence over those passages.
 
+Recording-screen layout update (product owner, October 2026): the milestone buttons sit in the bottom row, inline with Resuscitate and Emergency. The real-time clock grows into the space this frees, and Since last moment fills the area under it. The live status panel shows only the most recently recorded milestone (name, capture time, and the interval since the milestone before it); previous milestones are not listed on the recording screen and remain on History and in the report. This update takes precedence over the Live status and Milestone controls passages below where they differ.
+
 Default the app to landscape. The recording viewport has two persistent panels: the clock and capture controls on the left, and live milestone status on the right. Start with a 60/40 width split, then adjust to preserve clock legibility and touch targets on each supported device.
 
 ### Large real time clock
