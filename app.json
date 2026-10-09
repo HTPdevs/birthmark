@@ -40,6 +40,14 @@
       "expo-sqlite",
       "expo-sharing",
       [
+        "expo-build-properties",
+        {
+          "ios": {
+            "enableSceneSupport": true
+          }
+        }
+      ],
+      [
         "expo-screen-orientation",
         {
           "initialOrientation": "LANDSCAPE"

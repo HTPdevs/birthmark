@@ -44,6 +44,6 @@ Prototype status against the scenario IDs in `docs/Birthmark_MVP.md`. "Automated
 
 ## Not verified
 
-- iOS: this machine has no Xcode, so the Swift module and iOS build have not been compiled.
+- iOS: the Debug dev client builds with Xcode 27 (iOS 27 SDK) and launches on the iPhone 18 Pro simulator, using UIScene support from `expo-build-properties` (`ios.enableSceneSupport`). No physical iOS device or Release build has been run.
 - PDF output: the HTML is tested, but no generated PDF has been opened and reviewed.
 - Every physical-device, offline Release-build, and practice-tester scenario.
