@@ -1,0 +1,30 @@
+name: CI
+
+# Gate every PR and every push to main on the same checks run locally.
+# Without this, a GitHub "Update branch" merge that half-reverted
+# src/components/MilestoneRow.tsx reached main with two type errors
+# (Jest does not typecheck, so tests alone stayed green).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test

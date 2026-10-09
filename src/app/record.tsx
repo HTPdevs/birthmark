@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ApgarEditor } from '../components/ApgarEditor';
 import { BigClock } from '../components/BigClock';
 import { CaptureBar } from '../components/CaptureBar';
+import { CorrectionSheet } from '../components/CorrectionSheets';
 import { EmergencyControl } from '../components/EmergencyControl';
 import { LiveStatusPanel } from '../components/LiveStatusPanel';
 import { MilestoneRow } from '../components/MilestoneRow';
@@ -39,6 +40,8 @@ function Recording({ controller }: { controller: SessionController }) {
   const [apgarOpen, setApgarOpen] = useState(false);
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  // Moment opened from the live status panel for a quick edit or accidental-tap flag.
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const { data } = state;
   const elapsed = controller.elapsedAt(snapshot);
@@ -59,7 +62,6 @@ function Recording({ controller }: { controller: SessionController }) {
     );
   }
   const sinceLast = sinceLastMoment(data.moments, elapsed);
-  const activeEvents = data.events.filter((e) => e.status === 'active');
   const target = state.labelTargetId ? data.moments.find((m) => m.id === state.labelTargetId) ?? null : null;
 
   const milestone = (code: RowMilestoneCode | Extract<MilestoneCode, 'RESUSCITATE'>) => {
@@ -87,8 +89,8 @@ function Recording({ controller }: { controller: SessionController }) {
         <View style={styles.left}>
           <BigClock snapshot={snapshot} format={clockFormat} onToggle={() => appStore.toggleClockFormat()} />
           <View style={styles.timers}>
-            <View accessible accessibilityLabel={`Since last moment ${sinceLast === null ? 'none' : formatElapsed(sinceLast)}`}>
-              <Text style={styles.timerLabel}>Since last moment</Text>
+            <View accessible accessibilityLabel={`Time since ${sinceLast === null ? 'none' : formatElapsed(sinceLast)}`}>
+              <Text style={styles.timerLabel}>Time since</Text>
               <Text style={[styles.timerValue, type.tabular]}>{sinceLast === null ? '—' : formatElapsed(sinceLast)}</Text>
             </View>
           </View>
@@ -118,7 +120,7 @@ function Recording({ controller }: { controller: SessionController }) {
               accessibilityHint="Asks before finishing"
             />
           </View>
-          <LiveStatusPanel moments={data.moments} events={data.events} format={clockFormat} />
+          <LiveStatusPanel moments={data.moments} events={data.events} format={clockFormat} onSelect={setEditingId} />
           <View style={styles.emergency}>
             <EmergencyControl />
           </View>
@@ -126,13 +128,14 @@ function Recording({ controller }: { controller: SessionController }) {
       </KeyboardAvoidingView>
 
       <ApgarEditor controller={controller} visible={apgarOpen} onClose={() => setApgarOpen(false)} />
+      <CorrectionSheet controller={controller} momentId={editingId} onClose={() => setEditingId(null)} />
       <ConfirmDialog
         visible={confirmFinish}
-        title="Finish session?"
+        title="Finish session"
         message={
           state.queue.failed
             ? 'Some records are not saved yet. Finishing will wait until they are saved. Use Retry on the recording screen.'
-            : `This ends the session${activeEvents.length ? ` and ${activeEvents.length} active event${activeEvents.length === 1 ? '' : 's'}` : ''} at the same moment. You can resume from the report if this was a mistake.`
+            : 'End current session? You can edit entries and correct mistakes after clicking Finish'
         }
         confirmLabel={finishing ? 'Finishing' : 'Finish'}
         cancelLabel="Keep recording"
