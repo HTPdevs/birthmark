@@ -114,7 +114,6 @@ function Report({ controller }: { controller: SessionController }) {
           <Meta k="Date" v={report.header.sessionDate} />
           <Meta k="Start" v={report.header.startTime} />
           <Meta k="End" v={report.header.endTime} />
-          <Meta k="Total elapsed" v={report.header.totalElapsed} />
         </View>
 
         <View style={styles.actions}>
@@ -133,22 +132,11 @@ function Report({ controller }: { controller: SessionController }) {
 
         <Text style={styles.h2}>Timeline</Text>
         <Text style={styles.hint}>Tap a moment to rename, flag, or correct it.</Text>
-        <TableHead cols={['#', 'Label', 'Time (24h)', 'Elapsed', 'Since prev.', 'Group', 'Flags']} />
+        <TableHead cols={['#', 'Label', 'Time (24h)', 'Time since last', 'Flags']} />
         {report.timeline.map((r) => (
           <TimelineRowView key={r.momentId} row={r} onPress={r.isSystem ? undefined : () => setEditing(r.momentId)} />
         ))}
-
-        <Text style={styles.h2}>Events</Text>
-        {report.events.length === 0 ? <Text style={styles.hint}>No events.</Text> : null}
-        {report.events.map((e, i) => (
-          <View key={i} style={styles.tr}>
-            <Text style={[styles.td, styles.w3]}>{e.label}</Text>
-            <Text style={[styles.td, styles.w2, type.tabular]}>{e.start}</Text>
-            <Text style={[styles.td, styles.w2, type.tabular]}>{e.end}</Text>
-            <Text style={[styles.td, styles.w2, type.tabular]}>{e.duration}</Text>
-            <Text style={[styles.td, styles.w3]}>{e.autoEnded ? 'Ended at session finish' : ''}</Text>
-          </View>
-        ))}
+        <TotalRow value={report.header.totalElapsed} />
 
         <Text style={styles.h2}>APGAR assessments</Text>
         <Text style={styles.hint}>Untimed, operator-entered scores.</Text>
@@ -159,39 +147,6 @@ function Report({ controller }: { controller: SessionController }) {
           </View>
         ))}
 
-        <Text style={styles.h2}>Appendix</Text>
-        <Text style={styles.h3}>Excluded captures</Text>
-        {report.appendix.excluded.length === 0 ? <Text style={styles.hint}>None.</Text> : null}
-        {report.appendix.excluded.map((r) => (
-          <TimelineRowView key={r.momentId} row={r} onPress={() => setEditing(r.momentId)} />
-        ))}
-        <Text style={styles.h3}>Original values</Text>
-        {report.appendix.corrected.length === 0 ? <Text style={styles.hint}>None.</Text> : null}
-        {report.appendix.corrected.map((c, i) => (
-          <Text key={i} style={styles.line}>
-            {c.label}: {c.original} {'→'} {c.effective} ({c.source})
-          </Text>
-        ))}
-        <Text style={styles.h3}>Finishes and resumptions</Text>
-        {report.appendix.finishes.map((f, i) => (
-          <Text key={i} style={[styles.line, type.tabular]}>
-            {f.label} {f.time} ({f.elapsed})
-          </Text>
-        ))}
-        <Text style={styles.h3}>Clock and recovery flags</Text>
-        {report.appendix.flags.length === 0 ? <Text style={styles.hint}>None.</Text> : null}
-        {report.appendix.flags.map((f, i) => (
-          <Text key={i} style={styles.line}>
-            {f.type}: {f.interval} {f.detail}
-          </Text>
-        ))}
-        <Text style={styles.h3}>Change history</Text>
-        {report.changeHistory.length === 0 ? <Text style={styles.hint}>No changes.</Text> : null}
-        {report.changeHistory.map((c, i) => (
-          <Text key={i} style={styles.line}>
-            r{c.revision} {c.action}: {c.target} {c.from} {'→'} {c.to} ({c.changedAt})
-          </Text>
-        ))}
         <Text style={styles.footer}>{report.footer}</Text>
       </ScrollView>
 
@@ -265,7 +220,8 @@ function Meta({ k, v }: { k: string; v: string }) {
   );
 }
 
-const WIDTHS = [0.5, 3, 2, 1.5, 1.5, 2, 2.5];
+// #, Label, Time (24h), Time since last, Flags
+const WIDTHS = [0.5, 3, 2, 1.5, 2.5];
 
 function TableHead({ cols }: { cols: string[] }) {
   return (
@@ -280,13 +236,13 @@ function TableHead({ cols }: { cols: string[] }) {
 }
 
 function TimelineRowView({ row, onPress }: { row: TimelineRow; onPress?: () => void }) {
-  const cells = [String(row.sequence), row.label, row.time, row.elapsed, row.interval, row.group, row.flags.join(', ')];
+  const cells = [String(row.sequence), row.label, row.time, row.interval, row.flags.join(', ')];
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={`${row.label}, ${row.time}, elapsed ${row.elapsed}`}
+      accessibilityLabel={`${row.label}, ${row.time}, time since last ${row.interval}`}
       style={({ pressed }) => [styles.tr, pressed && styles.pressed]}>
       {cells.map((c, i) => (
         <Text key={i} style={[styles.td, type.tabular, { flex: WIDTHS[i] }, row.isSystem && styles.system]}>
@@ -294,6 +250,20 @@ function TimelineRowView({ row, onPress }: { row: TimelineRow; onPress?: () => v
         </Text>
       ))}
     </Pressable>
+  );
+}
+
+/** Summary line under the timeline: label in the Label column, value in the Time since last column. */
+function TotalRow({ value }: { value: string }) {
+  const cells = ['', 'Total time', '', value, ''];
+  return (
+    <View style={[styles.tr, styles.total]} accessible accessibilityLabel={`Total time ${value}`}>
+      {cells.map((c, i) => (
+        <Text key={i} style={[styles.td, styles.totalText, type.tabular, { flex: WIDTHS[i] }]}>
+          {c}
+        </Text>
+      ))}
+    </View>
   );
 }
 
@@ -318,16 +288,16 @@ const styles = StyleSheet.create({
   metaVal: { fontSize: 16, color: colors.ink },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginBottom: space.md },
   h2: { fontSize: 20, fontWeight: '800', color: colors.ink, marginTop: space.lg },
-  h3: { fontSize: 16, fontWeight: '800', color: colors.ink, marginTop: space.md },
   hint: { fontSize: 14, color: colors.slate },
   thead: { borderBottomWidth: 2, borderBottomColor: colors.line },
   tr: { flexDirection: 'row', gap: space.sm, paddingVertical: space.sm, borderBottomWidth: 1, borderBottomColor: colors.mist, minHeight: 44, alignItems: 'center' },
   th: { fontSize: 13, fontWeight: '700', color: colors.slate },
   td: { fontSize: 15, color: colors.ink },
-  w2: { flex: 2 },
   w3: { flex: 3 },
   system: { color: colors.slate, fontStyle: 'italic' },
   pressed: { backgroundColor: colors.mist },
+  total: { borderTopWidth: 2, borderTopColor: colors.line, borderBottomWidth: 0 },
+  totalText: { fontWeight: '800' },
   line: { fontSize: 15, color: colors.ink },
   footer: { marginTop: space.xl, fontSize: 14, color: colors.slate },
 });
