@@ -114,7 +114,6 @@ function Report({ controller }: { controller: SessionController }) {
           <Meta k="Date" v={report.header.sessionDate} />
           <Meta k="Start" v={report.header.startTime} />
           <Meta k="End" v={report.header.endTime} />
-          <Meta k="Total elapsed" v={report.header.totalElapsed} />
         </View>
 
         <View style={styles.actions}>
@@ -133,10 +132,11 @@ function Report({ controller }: { controller: SessionController }) {
 
         <Text style={styles.h2}>Timeline</Text>
         <Text style={styles.hint}>Tap a moment to rename, flag, or correct it.</Text>
-        <TableHead cols={['#', 'Label', 'Time (24h)', 'Elapsed', 'Since prev.', 'Group', 'Flags']} />
+        <TableHead cols={['#', 'Label', 'Time (24h)', 'Time since last', 'Flags']} />
         {report.timeline.map((r) => (
           <TimelineRowView key={r.momentId} row={r} onPress={r.isSystem ? undefined : () => setEditing(r.momentId)} />
         ))}
+        <TotalRow value={report.header.totalElapsed} />
 
         <Text style={styles.h2}>Events</Text>
         {report.events.length === 0 ? <Text style={styles.hint}>No events.</Text> : null}
@@ -265,7 +265,8 @@ function Meta({ k, v }: { k: string; v: string }) {
   );
 }
 
-const WIDTHS = [0.5, 3, 2, 1.5, 1.5, 2, 2.5];
+// #, Label, Time (24h), Time since last, Flags
+const WIDTHS = [0.5, 3, 2, 1.5, 2.5];
 
 function TableHead({ cols }: { cols: string[] }) {
   return (
@@ -280,13 +281,13 @@ function TableHead({ cols }: { cols: string[] }) {
 }
 
 function TimelineRowView({ row, onPress }: { row: TimelineRow; onPress?: () => void }) {
-  const cells = [String(row.sequence), row.label, row.time, row.elapsed, row.interval, row.group, row.flags.join(', ')];
+  const cells = [String(row.sequence), row.label, row.time, row.interval, row.flags.join(', ')];
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={`${row.label}, ${row.time}, elapsed ${row.elapsed}`}
+      accessibilityLabel={`${row.label}, ${row.time}, time since last ${row.interval}`}
       style={({ pressed }) => [styles.tr, pressed && styles.pressed]}>
       {cells.map((c, i) => (
         <Text key={i} style={[styles.td, type.tabular, { flex: WIDTHS[i] }, row.isSystem && styles.system]}>
@@ -294,6 +295,20 @@ function TimelineRowView({ row, onPress }: { row: TimelineRow; onPress?: () => v
         </Text>
       ))}
     </Pressable>
+  );
+}
+
+/** Summary line under the timeline: label in the Label column, value in the Time since last column. */
+function TotalRow({ value }: { value: string }) {
+  const cells = ['', 'Total time', '', value, ''];
+  return (
+    <View style={[styles.tr, styles.total]} accessible accessibilityLabel={`Total time ${value}`}>
+      {cells.map((c, i) => (
+        <Text key={i} style={[styles.td, styles.totalText, type.tabular, { flex: WIDTHS[i] }]}>
+          {c}
+        </Text>
+      ))}
+    </View>
   );
 }
 
@@ -328,6 +343,8 @@ const styles = StyleSheet.create({
   w3: { flex: 3 },
   system: { color: colors.slate, fontStyle: 'italic' },
   pressed: { backgroundColor: colors.mist },
+  total: { borderTopWidth: 2, borderTopColor: colors.line, borderBottomWidth: 0 },
+  totalText: { fontWeight: '800' },
   line: { fontSize: 15, color: colors.ink },
   footer: { marginTop: space.xl, fontSize: 14, color: colors.slate },
 });
