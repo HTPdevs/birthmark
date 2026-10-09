@@ -187,8 +187,9 @@ Convert elapsed entries to wall time using the relevant clock anchor. When clock
 
 The exported PDF follows the report structure above and is unchanged. The on-screen report shown after Finish is shorter:
 
-- Header: session date, start time, end time, and total elapsed duration. Start and End show the 24-hour time without a date; End shows In progress while the session is active. The session ID and the timezone and offsets are not shown in the header (the toolbar title still shows the short ID and revision).
-- Timeline: always in effective order. There is no capture-order toggle; the # column shows each moment's capture sequence.
+- Header: session date, start time, and end time. Start and End show the 24-hour time without a date; End shows In progress while the session is active. The session ID, the timezone and offsets, and the total elapsed duration are not shown in the header (the toolbar title still shows the short ID and revision).
+- Timeline: always in effective order. There is no capture-order toggle; the # column shows each moment's capture sequence. Columns are #, Label, Time (24h), Time since last, and Flags; elapsed session time and event group are not shown.
+- Total time: the total elapsed duration appears once, as a Total time line at the bottom of the timeline table.
 
 ### PDF export
 
