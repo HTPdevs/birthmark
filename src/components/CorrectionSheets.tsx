@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
-import type { SessionController } from '../domain/sessionController';
+import { MANUAL_MILESTONE_CODES, type ManualMilestoneCode, type SessionController } from '../domain/sessionController';
 import { formatDate, formatElapsed, formatTime24 } from '../domain/time';
-import { effectiveElapsed, effectiveWall, eventName, momentName } from '../domain/timeline';
-import { LABEL_GUIDANCE, LABEL_MAX_LENGTH, type Moment } from '../domain/types';
+import { effectiveElapsed, effectiveWall, momentName } from '../domain/timeline';
+import { LABEL_GUIDANCE, LABEL_MAX_LENGTH, type Moment, milestoneLabel } from '../domain/types';
 import { useControllerState } from '../state/store';
 import { Button } from '../ui/Button';
 import { Sheet } from '../ui/Sheet';
@@ -109,7 +109,14 @@ export function CorrectionSheet({
   );
 }
 
-/** Adds a moment that was not captured live, marked Manual in every view. */
+/** "Other" adds a plain moment; every other choice adds that milestone. */
+type EntryType = ManualMilestoneCode | 'OTHER';
+
+/**
+ * Adds a milestone or plain moment that was not captured live, marked Manual in
+ * every view. Type first, then time, then optional notes. Entries go in the
+ * Session group (no event selector: the UI no longer creates events).
+ */
 export function AddMissedSheet({
   controller,
   visible,
@@ -121,48 +128,55 @@ export function AddMissedSheet({
 }) {
   const { data } = useControllerState(controller);
   const offset = data.session.startedSnapshot.utcOffsetMinutes;
+  const [entryType, setEntryType] = useState<EntryType | null>(null);
   const [draft, setDraft] = useState<ManualTimeDraft>(() => draftFor(null, data.session.startedSnapshot.wallEpochMs, offset));
-  const [label, setLabel] = useState('');
-  const [eventId, setEventId] = useState<string | null>(null);
+  const [notes, setNotes] = useState('');
   const [message, setMessage] = useState<string | null>(null);
 
   const save = () => {
+    if (entryType === null) return setMessage('Choose what to add.');
     const input = draftToInput(draft);
     if ('error' in input) return setMessage(input.error);
-    const r = controller.addMissedMoment(input, label, eventId);
+    const r =
+      entryType === 'OTHER'
+        ? controller.addMissedMoment(input, notes, null)
+        : controller.addMissedMilestone(entryType, input, notes, null);
     if (!r.ok) return setMessage(r.error);
-    setLabel('');
-    setMessage(r.ambiguous ? 'Added as Manual time: a clock change is near this time.' : 'Missed moment added.');
+    setNotes('');
+    setEntryType(null);
+    setMessage(r.ambiguous ? 'Added as Manual time: a clock change is near this time.' : 'Added to timeline.');
   };
 
   return (
-    <Sheet visible={visible} title="Add missed moment" onClose={onClose}>
+    <Sheet visible={visible} title="Add to timeline" onClose={onClose}>
+      <Text style={styles.section}>Type</Text>
+      <View style={styles.groups}>
+        {MANUAL_MILESTONE_CODES.map((code) => (
+          <Button
+            key={code}
+            label={milestoneLabel(code)}
+            variant={entryType === code ? 'primary' : 'secondary'}
+            onPress={() => setEntryType(code)}
+          />
+        ))}
+        <Button label="Other" variant={entryType === 'OTHER' ? 'primary' : 'secondary'} onPress={() => setEntryType('OTHER')} />
+      </View>
+      <Text style={styles.section}>Time</Text>
       <ManualTimeFields draft={draft} onChange={setDraft} />
-      <Text style={styles.section}>Label (optional)</Text>
+      <Text style={styles.section}>Notes (optional)</Text>
       <TextInput
-        value={label}
-        onChangeText={setLabel}
+        value={notes}
+        onChangeText={setNotes}
         maxLength={LABEL_MAX_LENGTH}
-        placeholder="Optional label"
+        placeholder="Optional notes"
         placeholderTextColor={colors.slate}
         style={styles.input}
+        accessibilityLabel="Notes"
         accessibilityHint={LABEL_GUIDANCE}
         autoCorrect={false}
       />
       <Text style={styles.hint}>{LABEL_GUIDANCE}</Text>
-      <Text style={styles.section}>Group</Text>
-      <View style={styles.groups}>
-        <Button label="Session" variant={eventId === null ? 'primary' : 'secondary'} onPress={() => setEventId(null)} />
-        {data.events.map((e) => (
-          <Button
-            key={e.id}
-            label={eventName(e)}
-            variant={eventId === e.id ? 'primary' : 'secondary'}
-            onPress={() => setEventId(e.id)}
-          />
-        ))}
-      </View>
-      <Button label="Add moment" variant="primary" onPress={save} />
+      <Button label="Add to timeline" variant="primary" onPress={save} />
       {message ? <Text style={styles.message}>{message}</Text> : null}
     </Sheet>
   );

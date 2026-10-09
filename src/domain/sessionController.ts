@@ -18,6 +18,7 @@ import {
   type ElapsedMs,
   type ExportRecord,
   LABEL_MAX_LENGTH,
+  MILESTONES,
   type MilestoneCode,
   type Moment,
   type Revision,
@@ -31,6 +32,15 @@ import {
 } from './types';
 
 export type Clock = { read(): ClockSnapshot };
+
+/** Milestones that can be added with a time. APGAR is untimed and has its own editor. */
+export type ManualMilestoneCode = Exclude<MilestoneCode, 'APGAR'>;
+/** In spec order: ROM, Crown, Head, Body, First Cry, Resuscitate, Separation Gush, Placenta. */
+export const MANUAL_MILESTONE_CODES: readonly ManualMilestoneCode[] = MILESTONES.map((m) => m.code).filter(
+  (c): c is ManualMilestoneCode => c !== 'APGAR',
+);
+
+export type ManualAddResult = { ok: true; id: string; ambiguous: boolean } | { ok: false; error: string };
 
 export type ControllerDeps = {
   db: Db;
@@ -680,12 +690,43 @@ export class SessionController {
     return { ok: true, ambiguous: r.ambiguous };
   }
 
+  /** Adds a generic moment ("Other") that was not captured live. Marked Manual. */
   addMissedMoment(
     input: ManualTimeInput,
     rawLabel: string,
     eventId: string | null,
     reason: string | null = null,
-  ): { ok: true; id: string; ambiguous: boolean } | { ok: false; error: string } {
+  ): ManualAddResult {
+    return this.addManual('capture', null, input, rawLabel, eventId, reason);
+  }
+
+  /**
+   * Adds a milestone that was not captured live. It is stored like a captured
+   * milestone (kind 'milestone', milestoneCode) with source 'manual', so it takes
+   * part in ordering, intervals, live status and the row mode. APGAR is untimed
+   * and has its own editor, so it is not accepted here.
+   */
+  addMissedMilestone(
+    code: ManualMilestoneCode,
+    input: ManualTimeInput,
+    rawLabel: string,
+    eventId: string | null = null,
+    reason: string | null = null,
+  ): ManualAddResult {
+    if (!(MANUAL_MILESTONE_CODES as readonly string[]).includes(code)) {
+      return { ok: false, error: 'That milestone cannot be added with a time.' };
+    }
+    return this.addManual('milestone', code, input, rawLabel, eventId, reason);
+  }
+
+  private addManual(
+    kind: 'capture' | 'milestone',
+    code: ManualMilestoneCode | null,
+    input: ManualTimeInput,
+    rawLabel: string,
+    eventId: string | null,
+    reason: string | null,
+  ): ManualAddResult {
     const r = resolveManualTime(this.state.data, input, eventId, this.sessionEndElapsed());
     if (!r.ok) return r;
     const id = this.deps.uuid();
@@ -694,8 +735,8 @@ export class SessionController {
       sessionId: this.sessionId,
       eventId,
       captureSequence: this.nextSequence++,
-      kind: 'capture',
-      momentNumber: this.nextMomentNumber++,
+      kind,
+      momentNumber: kind === 'capture' ? this.nextMomentNumber++ : null,
       snapshot: null,
       originalElapsedMs: null,
       effectiveWallMs: r.wall,
@@ -703,7 +744,7 @@ export class SessionController {
       label: sanitizeLabel(rawLabel),
       source: 'manual',
       flaggedAccidental: false,
-      milestoneCode: null,
+      milestoneCode: code,
       timingEstimated: false,
     };
     const flags = r.ambiguous
@@ -713,18 +754,20 @@ export class SessionController {
       'add_manual',
       { momentId: id },
       null,
-      JSON.stringify({ elapsed: r.elapsed, wall: r.wall, label: moment.label }),
+      JSON.stringify({ elapsed: r.elapsed, wall: r.wall, label: moment.label, ...(code ? { milestoneCode: code } : {}) }),
       reason,
     );
+    const data = {
+      ...this.state.data,
+      session,
+      moments: [...this.state.data.moments, moment],
+      revisions: [...this.state.data.revisions, revision],
+      flags: [...this.state.data.flags, ...flags],
+    };
     this.set({
-      data: {
-        ...this.state.data,
-        session,
-        moments: [...this.state.data.moments, moment],
-        revisions: [...this.state.data.revisions, revision],
-        flags: [...this.state.data.flags, ...flags],
-      },
+      data,
       saveStates: { ...this.state.saveStates, [id]: 'pending' },
+      rowMode: deriveRowMode(data.moments, this.rowAllAtSequence),
     });
     void this.queue.enqueue({
       id: `manual-${id}`,

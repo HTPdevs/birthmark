@@ -57,8 +57,7 @@ export type ReportModel = {
   footer: string;
 };
 
-export const REPORT_FOOTER =
-  'Times captured from this device. Manually entered, corrected, or estimated values are identified.';
+export const REPORT_FOOTER = "Times are captured using this device's internal clock, verify for accuracy.";
 
 const DASH = '—';
 

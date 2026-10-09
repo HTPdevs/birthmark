@@ -267,6 +267,158 @@ describe('corrections', () => {
     expect(effectiveElapsed(c.getState().data.moments.find((m) => m.id === r.id)!)).toBe(60_000);
   });
 
+  it('A08 adds a missed milestone as a manual milestone with a revision', async () => {
+    const c = await SessionController.start(deps());
+    clock.advance(30_000);
+    const r = c.addMissedMilestone('CROWN', { mode: 'elapsed', elapsed: '00:00:10' }, '  slow  descent ');
+    expect(r).toEqual({ ok: true, id: expect.any(String), ambiguous: false });
+    if (!r.ok) return;
+    const check = (moments: Moment[]) => {
+      expect(moments.find((x) => x.id === r.id)).toMatchObject({
+        kind: 'milestone',
+        milestoneCode: 'CROWN',
+        source: 'manual',
+        snapshot: null,
+        originalElapsedMs: null,
+        effectiveElapsedMs: 10_000,
+        momentNumber: null,
+        eventId: null,
+        label: 'slow descent',
+        flaggedAccidental: false,
+      });
+    };
+    check(c.getState().data.moments);
+    const revisions = c.getState().data.revisions;
+    expect(revisions).toHaveLength(1);
+    expect(revisions[0]).toMatchObject({ action: 'add_manual', momentId: r.id });
+    expect(JSON.parse(revisions[0].newValue!)).toMatchObject({ elapsed: 10_000, milestoneCode: 'CROWN' });
+    expect(c.getState().data.session.revision).toBe(2);
+
+    const reloaded = await relaunch(c);
+    check(reloaded.getState().data.moments);
+    expect(reloaded.getState().data.revisions).toHaveLength(1);
+    expect(reloaded.getState().data.session.revision).toBe(2);
+  });
+
+  it('A08 rejects a missed milestone outside the session and writes nothing', async () => {
+    const c = await SessionController.start(deps());
+    clock.advance(10_000);
+    const before = c.getState().data;
+    expect(c.addMissedMilestone('HEAD', { mode: 'elapsed', elapsed: '00:05:00' }, '')).toEqual({
+      ok: false,
+      error: 'That time is outside this session.',
+    });
+    // One hour before the 14:22:08 start.
+    const early = c.addMissedMilestone('HEAD', { mode: 'clock', date: '2026-10-07', time: '13:22:08', offsetMinutes: -420 }, '');
+    expect(early.ok).toBe(false);
+    // APGAR is untimed and never becomes a timeline moment, even if a caller forces it.
+    const apgar = c.addMissedMilestone('APGAR' as ManualMilestoneCode, { mode: 'elapsed', elapsed: '00:00:05' }, '');
+    expect(apgar.ok).toBe(false);
+    expect(c.getState().data.moments).toEqual(before.moments);
+    expect(c.getState().data.revisions).toHaveLength(0);
+    expect(c.getState().data.session.revision).toBe(before.session.revision);
+  });
+
+  it('A08 after finish, a missed milestone must fall before the finish boundary', async () => {
+    const c = await SessionController.start(deps());
+    clock.advance(20_000);
+    await c.finish();
+    clock.advance(60_000);
+    expect(c.addMissedMilestone('PLACENTA', { mode: 'elapsed', elapsed: '00:00:30' }, '').ok).toBe(false);
+    expect(c.addMissedMilestone('PLACENTA', { mode: 'elapsed', elapsed: '00:00:15' }, '').ok).toBe(true);
+  });
+
+  it('R05 a failed manual milestone write retries without duplicating', async () => {
+    const c = await SessionController.start(deps());
+    clock.advance(20_000);
+    db.failNext(/INSERT INTO moments/);
+    const r = c.addMissedMilestone('HEAD', { mode: 'elapsed', elapsed: '00:00:10' }, '');
+    if (!r.ok) throw new Error(r.error);
+    await c.whenSaved();
+    expect(c.getState().queue.failed).toBe(true);
+    expect(c.getState().saveStates[r.id]).toBe('pending');
+    c.retry();
+    await c.whenSaved();
+    expect(c.getState().saveStates[r.id]).toBe('saved');
+    const rows = (await repo.loadSessionData(db, c.sessionId))!;
+    expect(rows.moments.filter((m) => m.milestoneCode === 'HEAD')).toHaveLength(1);
+    expect(rows.revisions).toHaveLength(1);
+  });
+
+  it('A08 a manual milestone shows by name in the report and joins intervals and live status', async () => {
+    const c = await SessionController.start(deps());
+    clock.advance(10_000);
+    c.markMilestone('ROM');
+    clock.advance(20_000);
+    const head = c.markMilestone('HEAD');
+    const crown = c.addMissedMilestone('CROWN', { mode: 'elapsed', elapsed: '00:00:20' }, '');
+    const body = c.addMissedMilestone('BODY', { mode: 'elapsed', elapsed: '00:00:30' }, 'shoulder');
+    if (!crown.ok || !body.ok) throw new Error('manual milestones should be accepted');
+    const data = c.getState().data;
+    const r = buildReport(data, wallMs(clock.wall), c.elapsedAt(clock.read()));
+    expect(r.timeline.map((x) => [x.label, x.interval, x.flags])).toEqual([
+      ['ROM', '—', []],
+      ['Crown', '00:00:10', ['Manual']],
+      ['Head', '00:00:10', []],
+      ['Body: shoulder', '00:00:00', ['Manual']],
+    ]);
+    expect(intervalsSincePrevious(data.moments).get(head)).toBe(10_000);
+    // Body ties with Head on elapsed; the later capture sequence makes it the newest.
+    const live = liveStatus(data.moments);
+    expect(live.history.map((m) => m.milestoneCode)).toEqual(['ROM', 'CROWN', 'HEAD', 'BODY']);
+    expect(live.current!.id).toBe(body.id);
+    expect(live.previous!.id).toBe(head);
+  });
+
+  it('L06 a manually added First Cry switches the row like a captured one', async () => {
+    const c = await SessionController.start(deps());
+    clock.advance(30_000);
+    c.addMissedMilestone('CROWN', { mode: 'elapsed', elapsed: '00:00:05' }, '');
+    expect(c.getState().rowMode).toBe('all');
+    c.addMissedMilestone('FIRST_CRY', { mode: 'elapsed', elapsed: '00:00:20' }, '');
+    expect(c.getState().rowMode).toBe('post_first_cry');
+    const reloadedBefore = await relaunch(c);
+    expect(reloadedBefore.getState().rowMode).toBe('post_first_cry');
+    reloadedBefore.showAllMilestones();
+    expect(reloadedBefore.getState().rowMode).toBe('all');
+    const reloaded = await relaunch(reloadedBefore);
+    expect(reloaded.getState().rowMode).toBe('all');
+  });
+
+  it('A08 "Other" still adds a plain numbered moment', async () => {
+    const c = await SessionController.start(deps());
+    clock.advance(5000);
+    c.markMoment();
+    clock.advance(25_000);
+    const r = c.addMissedMoment({ mode: 'elapsed', elapsed: '00:00:10' }, '', null);
+    if (!r.ok) throw new Error(r.error);
+    expect(c.getState().data.moments.find((x) => x.id === r.id)).toMatchObject({
+      kind: 'capture',
+      milestoneCode: null,
+      source: 'manual',
+      momentNumber: 2,
+    });
+    const report = buildReport(c.getState().data, wallMs(clock.wall), null);
+    expect(report.timeline.map((x) => [x.label, x.flags])).toEqual([
+      ['Moment 1', []],
+      ['Moment 2', ['Manual']],
+    ]);
+    expect(c.getState().rowMode).toBe('all');
+  });
+
+  it('offers every timed milestone except APGAR, in spec order', () => {
+    expect(MANUAL_MILESTONE_CODES).toEqual([
+      'ROM',
+      'CROWN',
+      'HEAD',
+      'BODY',
+      'FIRST_CRY',
+      'RESUSCITATE',
+      'SEPARATION_GUSH',
+      'PLACENTA',
+    ]);
+  });
+
   it('L08 flagging the newest milestone rebuilds live status', async () => {
     const c = await SessionController.start(deps());
     c.markMilestone('CROWN');
