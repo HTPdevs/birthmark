@@ -38,7 +38,7 @@ Prototype status against the scenario IDs in `docs/Birthmark_MVP.md`. "Automated
 
 ## On-screen report vs PDF
 
-The on-screen report is a trimmed view; the PDF (`src/report/renderHtml.ts`) is unchanged and still carries every section of the spec's report structure. On screen, the header shows Date, Start and End (time only, from `header.startTime` / `header.endTime`, tested in `tests/report.test.ts`). Session ID, Timezone, and the Show capture order toggle are removed. The timeline table has columns #, Label, Time (24h), Time since last, and Flags (Elapsed and Group are removed), and ends with a Total time line showing `header.totalElapsed`.
+The on-screen report is a trimmed view; the PDF (`src/report/renderHtml.ts`) is unchanged and still carries every section of the spec's report structure. On screen, the header shows Date, Start and End (time only, from `header.startTime` / `header.endTime`, tested in `tests/report.test.ts`). Session ID, Timezone, and the Show capture order toggle are removed. The timeline table has columns #, Label, Time (24h), Time since last, and Flags (Elapsed and Group are removed), and ends with a Total time line showing `header.totalElapsed`. The Events section and the Appendix (excluded captures, original values, finishes and resumptions, clock and recovery flags, change history) are not on screen; they remain in the PDF. As a result, a capture flagged as an accidental tap has no on-screen place to be reopened and unflagged. A08 is covered at the controller level and is unaffected.
 
 ## Verified in this pass
 

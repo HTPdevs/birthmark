@@ -168,7 +168,7 @@ Use unique IDs to make retry operations idempotent. Multiple intentional taps ar
 
 ### Review without erasing the capture
 
-Users can rename a label, flag or unflag an accidental tap, add a missed moment, or correct the effective time. Every change increments the session revision and records its old and new value. Do not hard-delete individual moments. An accidental tap stays visible as excluded in review and the report appendix.
+Users can rename a label, flag or unflag an accidental tap, add a missed moment, or correct the effective time. Every change increments the session revision and records its old and new value. Do not hard-delete individual moments. An accidental tap stays visible as excluded in the PDF report appendix (see On-screen report below).
 
 For a missed moment, accept either elapsed time or a local date and 24-hour time with the session offset shown. Require a date for cross-midnight entries and explicit offset selection for ambiguous local times. Require the effective time to fall within the session, and within its event if grouped. Default manual entries to the Session group.
 
@@ -190,6 +190,7 @@ The exported PDF follows the report structure above and is unchanged. The on-scr
 - Header: session date, start time, and end time. Start and End show the 24-hour time without a date; End shows In progress while the session is active. The session ID, the timezone and offsets, and the total elapsed duration are not shown in the header (the toolbar title still shows the short ID and revision).
 - Timeline: always in effective order. There is no capture-order toggle; the # column shows each moment's capture sequence. Columns are #, Label, Time (24h), Time since last, and Flags; elapsed session time and event group are not shown.
 - Total time: the total elapsed duration appears once, as a Total time line at the bottom of the timeline table.
+- Sections: the screen shows the timeline and APGAR assessments, then the footer. The event summary and the appendix (excluded captures, original values, finishes and resumptions, clock and recovery flags, change history) are not shown on screen; they remain in the PDF. Because excluded captures are not listed on screen, a capture flagged as an accidental tap cannot be reopened from the report screen to unflag it.
 
 ### PDF export
 
