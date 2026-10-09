@@ -15,7 +15,7 @@ import { MilestoneRow } from '../components/MilestoneRow';
 import { SaveStatus } from '../components/SaveStatus';
 import type { SessionController } from '../domain/sessionController';
 import { formatElapsed } from '../domain/time';
-import { sinceLastMoment } from '../domain/timeline';
+import { sinceLastHeading, sinceLastMoment } from '../domain/timeline';
 import type { MilestoneCode, RowMilestoneCode } from '../domain/types';
 import { appStore, useAppState, useClockTick, useControllerState } from '../state/store';
 import { Button } from '../ui/Button';
@@ -153,9 +153,10 @@ const styles = StyleSheet.create({
   finishingTitle: { fontSize: 28, fontWeight: '800', color: colors.ink },
   finishingBody: { fontSize: 18, color: colors.slate, textAlign: 'center', maxWidth: 560 },
   row: { flex: 1, flexDirection: 'row' },
-  left: { flex: 6, paddingHorizontal: space.lg, paddingVertical: space.md, gap: space.md },
+  // Wider than the spec's 60/40 at the operator's request: a bigger clock, a narrower recorded list.
+  left: { flex: 65, paddingHorizontal: space.lg, paddingVertical: space.md, gap: space.sm },
   right: {
-    flex: 4,
+    flex: 35,
     borderLeftWidth: 1,
     borderLeftColor: colors.line,
     paddingHorizontal: space.lg,
@@ -163,8 +164,8 @@ const styles = StyleSheet.create({
     gap: space.md,
   },
   timers: { flexDirection: 'row', gap: space.xl, alignItems: 'flex-end' },
-  timerLabel: { fontSize: 14, fontWeight: '700', color: colors.slate, textTransform: 'uppercase', letterSpacing: 0.5 },
-  timerValue: { fontSize: 30, fontWeight: '700', color: colors.ink },
+  timerLabel: { fontSize: 18, lineHeight: 22, fontWeight: '700', color: colors.slate, textTransform: 'uppercase', letterSpacing: 0.5 },
+  timerValue: { fontSize: 44, lineHeight: 50, fontWeight: '800', color: colors.ink },
   topBar: { flexDirection: 'row', gap: space.sm, alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' },
   emergency: { alignItems: 'flex-end' },
 });

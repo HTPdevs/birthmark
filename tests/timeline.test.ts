@@ -1,5 +1,5 @@
 import { CALL_FALLBACK_MESSAGE, type PhoneAdapter, requestEmergencyCall } from '@/domain/emergency';
-import { deriveRowMode, liveStatus, momentName, sinceLastMoment, sortByEffective } from '@/domain/timeline';
+import { deriveRowMode, liveStatus, momentName, sinceLastHeading, sinceLastMoment, sortByEffective } from '@/domain/timeline';
 import {
   FULL_ROW,
   MILESTONES,
@@ -102,6 +102,19 @@ describe('live status (L05)', () => {
     expect(sinceLastMoment([boundary, accidental], elapsedMs(5000))).toBeNull();
     const real = moment({ elapsed: 3000 });
     expect(sinceLastMoment([boundary, accidental, real], elapsedMs(5000))).toBe(2000);
+  });
+});
+
+describe('time since heading', () => {
+  it('names the last included record, skipping accidental taps and system rows', () => {
+    expect(sinceLastHeading([], [])).toBe('Time since');
+    const crown = moment({ elapsed: 1000, kind: 'milestone', milestoneCode: 'CROWN', label: 'slow' });
+    expect(sinceLastHeading([crown], [])).toBe('Time since Crown');
+    const head = moment({ elapsed: 2000, kind: 'milestone', milestoneCode: 'HEAD', flaggedAccidental: true });
+    const finish = moment({ elapsed: 3000, kind: 'finish' });
+    expect(sinceLastHeading([crown, head, finish], [])).toBe('Time since Crown');
+    const cap = moment({ elapsed: 4000, label: 'Shoulders' });
+    expect(sinceLastHeading([crown, head, finish, cap], [])).toBe('Time since Shoulders');
   });
 });
 

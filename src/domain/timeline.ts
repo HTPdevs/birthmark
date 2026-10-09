@@ -99,6 +99,17 @@ export function sinceLastMoment(moments: Moment[], nowElapsed: ElapsedMs): Elaps
   return last ? elapsedMs(Math.max(0, nowElapsed - effectiveElapsed(last))) : null;
 }
 
+/**
+ * Heading for the "Time since" timer: names the last included record, so it
+ * reads "Time since Crown". A milestone's label is left off to keep it short.
+ */
+export function sinceLastHeading(moments: Moment[], events: SessionEvent[]): string {
+  const last = lastIncluded(moments);
+  if (!last) return 'Time since';
+  const name = last.kind === 'milestone' && last.milestoneCode ? milestoneLabel(last.milestoneCode) : momentName(last, events);
+  return `Time since ${name}`;
+}
+
 export type LiveStatus = {
   history: Moment[];
   current: Moment | null;

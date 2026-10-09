@@ -68,9 +68,6 @@ export default function Home() {
               accessible={false}
             />
           </View>
-          <Text style={styles.tagline}>
-            Seamlessly document the birth flow in real-time
-          </Text>
           {active ? (
             <Button
               label="Return to recording"
@@ -137,6 +134,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  brand: { alignItems: "center", gap: space.xs },
   lockup: { alignSelf: "center" },
   lockupImage: { width: LOCKUP_WIDTH, height: LOCKUP_HEIGHT },
   tagline: { fontSize: 20, color: colors.slate, textAlign: "center" },

@@ -3,6 +3,10 @@ import {
   anchorFromSnapshot,
   checkpointFromSnapshot,
   computeElapsed,
+  deviceOffsetAtLocal,
+  deviceOffsetAtWall,
+  formatDateMDY,
+  parseDateMDY,
   detectClockChanges,
   formatElapsed,
   formatTime12,
@@ -149,5 +153,45 @@ describe('parsing manual input', () => {
     expect(parseOffset('-07:00')).toBe(-420);
     expect(parseOffset('UTC+05:30')).toBe(330);
     expect(parseOffset('+15:00')).toBeNull();
+  });
+});
+
+describe('MM-DD-YYYY dates and device time zone', () => {
+  it('formats and parses month-first dates', () => {
+    expect(formatDateMDY(T0, -420)).toBe('10-07-2026');
+    expect(parseDateMDY('10-07-2026')).toBe('2026-10-07');
+    expect(parseDateMDY(' 1/5/2027 ')).toBe('2027-01-05');
+    expect(parseDateMDY('02-29-2028')).toBe('2028-02-29');
+  });
+
+  it('rejects impossible or year-first dates', () => {
+    expect(parseDateMDY('02-30-2026')).toBeNull();
+    expect(parseDateMDY('13-01-2026')).toBeNull();
+    expect(parseDateMDY('00-10-2026')).toBeNull();
+    expect(parseDateMDY('2026-10-07')).toBeNull();
+    expect(parseDateMDY('')).toBeNull();
+  });
+
+  it('reads the offset from the device zone, east of UTC positive', () => {
+    expect(deviceOffsetAtWall(T0, () => 420)).toBe(-420);
+    expect(deviceOffsetAtWall(T0, () => -330)).toBe(330);
+    expect(Object.is(deviceOffsetAtWall(T0, () => 0), 0)).toBe(true);
+    expect(deviceOffsetAtWall(T0)).toBe(-new Date(T0).getTimezoneOffset() || 0);
+    expect(deviceOffsetAtLocal('2026-10-07', '14:22:08', () => 420)).toBe(-420);
+    expect(deviceOffsetAtLocal('2026-10-07', '2:22:08', () => 420)).toBeNull();
+    expect(deviceOffsetAtLocal('10-07-2026', '14:22:08', () => 420)).toBeNull();
+  });
+
+  it('passes the local fields to the zone lookup as device-local time', () => {
+    let seen: Date | null = null;
+    deviceOffsetAtLocal('2026-03-08', '01:30:00', (d) => {
+      seen = d;
+      return 480;
+    });
+    expect(seen!.getFullYear()).toBe(2026);
+    expect(seen!.getMonth()).toBe(2);
+    expect(seen!.getDate()).toBe(8);
+    expect(seen!.getHours()).toBe(1);
+    expect(seen!.getMinutes()).toBe(30);
   });
 });

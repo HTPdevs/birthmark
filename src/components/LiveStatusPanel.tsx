@@ -22,6 +22,7 @@ type Props = {
  */
 export function LiveStatusPanel({ moments, events, format, onSelect }: Props) {
   const scroll = useRef<ScrollView>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const status = liveStatus(moments);
   const fmt = (m: Moment) => {
     const wall = effectiveWall(m);
@@ -76,6 +77,28 @@ export function LiveStatusPanel({ moments, events, format, onSelect }: Props) {
         ) : null}
       </Pressable>
     </ScrollView>
+  );
+}
+
+function RowActions({ name, onDelete, onEdit }: { name: string; onDelete: () => void; onEdit: () => void }) {
+  return (
+    <View style={styles.actions}>
+      <Pressable
+        onPress={onDelete}
+        accessibilityRole="button"
+        accessibilityLabel={`Delete ${name}`}
+        accessibilityHint="Marks it as an accidental tap. It stays in the report appendix."
+        style={({ pressed }) => [styles.icon, pressed && styles.pressed]}>
+        <Ionicons name="trash-outline" size={26} color={colors.danger} />
+      </Pressable>
+      <Pressable
+        onPress={onEdit}
+        accessibilityRole="button"
+        accessibilityLabel={`Edit ${name}`}
+        style={({ pressed }) => [styles.icon, pressed && styles.pressed]}>
+        <Ionicons name="pencil" size={24} color={colors.ink} />
+      </Pressable>
+    </View>
   );
 }
 
