@@ -40,7 +40,7 @@ function Recording({ controller }: { controller: SessionController }) {
   const [apgarOpen, setApgarOpen] = useState(false);
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [finishing, setFinishing] = useState(false);
-  // Moment opened from the live status panel's pencil for a time correction or accidental-tap flag.
+  // Moment opened from the live status panel for a quick edit or accidental-tap flag.
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const { data } = state;
@@ -62,7 +62,6 @@ function Recording({ controller }: { controller: SessionController }) {
     );
   }
   const sinceLast = sinceLastMoment(data.moments, elapsed);
-  const sinceHeading = sinceLastHeading(data.moments, data.events);
   const target = state.labelTargetId ? data.moments.find((m) => m.id === state.labelTargetId) ?? null : null;
 
   const milestone = (code: RowMilestoneCode | Extract<MilestoneCode, 'RESUSCITATE'>) => {
@@ -90,10 +89,8 @@ function Recording({ controller }: { controller: SessionController }) {
         <View style={styles.left}>
           <BigClock snapshot={snapshot} format={clockFormat} onToggle={() => appStore.toggleClockFormat()} />
           <View style={styles.timers}>
-            <View accessible accessibilityLabel={`${sinceHeading} ${sinceLast === null ? 'none' : formatElapsed(sinceLast)}`}>
-              <Text style={styles.timerLabel} numberOfLines={1}>
-                {sinceHeading}
-              </Text>
+            <View accessible accessibilityLabel={`Time since ${sinceLast === null ? 'none' : formatElapsed(sinceLast)}`}>
+              <Text style={styles.timerLabel}>Time since</Text>
               <Text style={[styles.timerValue, type.tabular]}>{sinceLast === null ? '—' : formatElapsed(sinceLast)}</Text>
             </View>
           </View>
@@ -123,13 +120,7 @@ function Recording({ controller }: { controller: SessionController }) {
               accessibilityHint="Asks before finishing"
             />
           </View>
-          <LiveStatusPanel
-            moments={data.moments}
-            events={data.events}
-            format={clockFormat}
-            onEdit={setEditingId}
-            onDelete={(id) => controller.setAccidental(id, true, null)}
-          />
+          <LiveStatusPanel moments={data.moments} events={data.events} format={clockFormat} onSelect={setEditingId} />
           <View style={styles.emergency}>
             <EmergencyControl />
           </View>

@@ -1,30 +1,26 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { formatElapsed, formatTime12, formatTime24 } from '../domain/time';
 import { effectiveWall, liveStatus, momentName } from '../domain/timeline';
 import type { Moment, SessionEvent } from '../domain/types';
-import { TOUCH, colors, radius, space, type } from '../ui/theme';
+import { colors, radius, space, type } from '../ui/theme';
 import type { ClockFormat } from './BigClock';
 
 type Props = {
   moments: Moment[];
   events: SessionEvent[];
   format: ClockFormat;
-  /** Pencil: open the record's time correction. */
-  onEdit: (momentId: string) => void;
-  /** Trash: flag the record as an accidental tap. It is kept, not deleted. */
-  onDelete: (momentId: string) => void;
+  /** Tapping a row opens it for a quick rename, accidental-tap flag, or time correction. */
+  onSelect: (momentId: string) => void;
 };
 
 /**
  * Recorded milestone observations, newest at the bottom and most prominent.
  * Generic moments and event boundaries never replace the current milestone.
- * Tapping a row shows trash and pencil icons inline (no popup); tapping it
- * again hides them.
+ * Every row is pressable so an accidental press can be fixed mid-session.
  */
-export function LiveStatusPanel({ moments, events, format, onEdit, onDelete }: Props) {
+export function LiveStatusPanel({ moments, events, format, onSelect }: Props) {
   const scroll = useRef<ScrollView>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const status = liveStatus(moments);
@@ -43,22 +39,6 @@ export function LiveStatusPanel({ moments, events, format, onEdit, onDelete }: P
     );
   }
 
-  const toggle = (id: string) => setSelectedId((cur) => (cur === id ? null : id));
-  const actions = (m: Moment) =>
-    selectedId === m.id ? (
-      <RowActions
-        name={momentName(m, events)}
-        onDelete={() => {
-          setSelectedId(null);
-          onDelete(m.id);
-        }}
-        onEdit={() => {
-          setSelectedId(null);
-          onEdit(m.id);
-        }}
-      />
-    ) : null;
-
   const current = status.current;
   const earlier = status.history.slice(0, -1);
   return (
@@ -68,42 +48,34 @@ export function LiveStatusPanel({ moments, events, format, onEdit, onDelete }: P
       contentContainerStyle={styles.content}
       onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: false })}>
       {earlier.map((m) => (
-        <View key={m.id} style={styles.rowWrap}>
-          <Pressable
-            onPress={() => toggle(m.id)}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: selectedId === m.id }}
-            accessibilityLabel={`${momentName(m, events)} at ${fmt(m)}`}
-            accessibilityHint="Shows delete and edit"
-            style={({ pressed }) => [styles.prevRow, pressed && styles.pressed]}>
-            <Text style={styles.prevName} numberOfLines={1}>
-              {momentName(m, events)}
-            </Text>
-            <Text style={[styles.prevTime, type.tabular]}>{fmt(m)}</Text>
-          </Pressable>
-          {actions(m)}
-        </View>
-      ))}
-      <View style={[styles.rowWrap, styles.current]}>
         <Pressable
-          onPress={() => toggle(current.id)}
+          key={m.id}
+          onPress={() => onSelect(m.id)}
           accessibilityRole="button"
-          accessibilityState={{ expanded: selectedId === current.id }}
-          accessibilityLabel={`${momentName(current, events)} at ${fmt(current)}, latest milestone`}
-          accessibilityHint="Shows delete and edit"
-          style={({ pressed }) => [styles.flex, pressed && styles.pressed]}>
-          <Text style={styles.currentName} numberOfLines={2}>
-            {momentName(current, events)}
+          accessibilityLabel={`${momentName(m, events)} at ${fmt(m)}, edit`}
+          style={({ pressed }) => [styles.prevRow, pressed && styles.pressed]}>
+          <Text style={styles.prevName} numberOfLines={1}>
+            {momentName(m, events)}
           </Text>
-          <Text style={[styles.currentTime, type.tabular]}>{fmt(current)}</Text>
-          {status.previous && status.sincePreviousMs !== null ? (
-            <Text style={[styles.since, type.tabular]}>
-              Since {momentName(status.previous, events)} {formatElapsed(status.sincePreviousMs)}
-            </Text>
-          ) : null}
+          <Text style={[styles.prevTime, type.tabular]}>{fmt(m)}</Text>
         </Pressable>
-        {actions(current)}
-      </View>
+      ))}
+      <Pressable
+        onPress={() => onSelect(current.id)}
+        accessibilityRole="button"
+        accessibilityLabel={`${momentName(current, events)} at ${fmt(current)}, edit`}
+        accessibilityHint="Latest milestone"
+        style={({ pressed }) => [styles.current, pressed && styles.pressed]}>
+        <Text style={styles.currentName} numberOfLines={2}>
+          {momentName(current, events)}
+        </Text>
+        <Text style={[styles.currentTime, type.tabular]}>{fmt(current)}</Text>
+        {status.previous && status.sincePreviousMs !== null ? (
+          <Text style={[styles.since, type.tabular]}>
+            Since {momentName(status.previous, events)} {formatElapsed(status.sincePreviousMs)}
+          </Text>
+        ) : null}
+      </Pressable>
     </ScrollView>
   );
 }
@@ -134,10 +106,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { flexGrow: 1, justifyContent: 'flex-end', gap: space.xs, paddingBottom: space.sm },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: space.lg },
-  emptyText: { color: colors.slate, fontSize: 16, textAlign: 'center' },
-  rowWrap: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
+  emptyText: { color: colors.slate, fontSize: 17, textAlign: 'center' },
   prevRow: {
-    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -145,22 +115,11 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: radius.sm,
   },
-  prevName: { color: colors.slate, fontSize: 15, flexShrink: 1 },
-  prevTime: { color: colors.slate, fontSize: 15 },
+  prevName: { color: colors.slate, fontSize: 17, flexShrink: 1 },
+  prevTime: { color: colors.slate, fontSize: 17 },
   current: { borderTopWidth: 1, borderTopColor: colors.line, paddingTop: space.sm, marginTop: space.xs },
-  currentName: { color: colors.ink, fontSize: 26, fontWeight: '800' },
-  currentTime: { color: colors.ink, fontSize: 18, fontWeight: '600' },
+  currentName: { color: colors.ink, fontSize: 34, fontWeight: '800' },
+  currentTime: { color: colors.ink, fontSize: 22, fontWeight: '600' },
   pressed: { opacity: 0.6 },
-  since: { color: colors.ink, fontSize: 15, fontWeight: '700', marginTop: 2 },
-  actions: { flexDirection: 'row', gap: space.xs },
-  icon: {
-    width: TOUCH,
-    height: TOUCH,
-    borderRadius: radius.sm,
-    borderWidth: 2,
-    borderColor: colors.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.paper,
-  },
+  since: { color: colors.ink, fontSize: 18, fontWeight: '700', marginTop: 2 },
 });
