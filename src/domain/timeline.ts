@@ -50,14 +50,18 @@ export function momentName(m: Moment, events: SessionEvent[]): string {
   switch (m.kind) {
     case 'capture':
       return m.label?.trim() ? m.label : `Moment ${m.momentNumber ?? '?'}`;
-    case 'milestone':
-      return m.label?.trim() ? m.label : m.milestoneCode ? milestoneLabel(m.milestoneCode) : 'Milestone';
+    case 'milestone': {
+      // The milestone name always shows; a label adds to it instead of replacing it,
+      // so a note on a captured or manually added milestone never hides which one it was.
+      const name = m.milestoneCode ? milestoneLabel(m.milestoneCode) : 'Milestone';
+      return m.label?.trim() ? `${name}: ${m.label}` : name;
+    }
     case 'event_start':
       return `Event started: ${ev ? eventName(ev) : 'Event'}`;
     case 'event_end':
       return `Event ended: ${ev ? eventName(ev) : 'Event'}`;
     case 'finish':
-      return 'Session finished';
+      return 'Finish time';
     case 'resume':
       return 'Resumed after finish';
   }

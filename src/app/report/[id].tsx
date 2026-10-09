@@ -118,7 +118,7 @@ function Report({ controller }: { controller: SessionController }) {
 
         <View style={styles.actions}>
           <Button label="APGAR" onPress={() => setApgarOpen(true)} />
-          <Button label="Add missed moment" onPress={() => setAddOpen(true)} />
+          <Button label="Add to timeline" onPress={() => setAddOpen(true)} />
           {!isActive ? (
             <Button
               label="Resume session"
@@ -139,7 +139,6 @@ function Report({ controller }: { controller: SessionController }) {
         <TotalRow value={report.header.totalElapsed} />
 
         <Text style={styles.h2}>APGAR assessments</Text>
-        <Text style={styles.hint}>Untimed, operator-entered scores.</Text>
         {report.apgar.map((a) => (
           <View key={a.label} style={styles.tr}>
             <Text style={[styles.td, styles.w3]}>{a.label}</Text>
@@ -168,7 +167,7 @@ function Report({ controller }: { controller: SessionController }) {
         {exportState.kind === 'ready' ? (
           <>
             <Text style={styles.line}>{exportState.pdf.fileName}</Text>
-            <Text style={styles.hint}>Choose where to save it. Nothing is sent automatically.</Text>
+            <Text style={styles.hint}>You can save this file to your device or share with someone else.</Text>
             <Button
               label="Save or share"
               variant="primary"
@@ -282,11 +281,11 @@ const styles = StyleSheet.create({
   title: { flex: 1, fontSize: 22, fontWeight: '800', color: colors.ink },
   body: { padding: space.lg, gap: space.xs, paddingBottom: space.xl * 2 },
   error: { color: colors.danger, fontSize: 16, fontWeight: '700' },
-  meta: { flexDirection: 'row', flexWrap: 'wrap', gap: space.lg, marginBottom: space.sm },
-  metaItem: { minWidth: 180 },
+  meta: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space.lg, marginBottom: space.sm },
+  metaItem: { minWidth: 180, alignItems: 'center' },
   metaKey: { fontSize: 13, color: colors.slate, fontWeight: '700' },
   metaVal: { fontSize: 16, color: colors.ink },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginBottom: space.md },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space.sm, marginBottom: space.md },
   h2: { fontSize: 20, fontWeight: '800', color: colors.ink, marginTop: space.lg },
   hint: { fontSize: 14, color: colors.slate },
   thead: { borderBottomWidth: 2, borderBottomColor: colors.line },
@@ -299,5 +298,6 @@ const styles = StyleSheet.create({
   total: { borderTopWidth: 2, borderTopColor: colors.line, borderBottomWidth: 0 },
   totalText: { fontWeight: '800' },
   line: { fontSize: 15, color: colors.ink },
-  footer: { marginTop: space.xl, fontSize: 14, color: colors.slate },
+  // Warning role (rust): the footer tells the reader to verify the device-clock times.
+  footer: { marginTop: space.xl, fontSize: 14, fontWeight: '700', color: colors.danger },
 });

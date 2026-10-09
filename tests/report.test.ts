@@ -1,6 +1,6 @@
 import { SessionController } from '@/domain/sessionController';
 import { wallMs } from '@/domain/types';
-import { buildReport, reportFileName } from '@/report/reportModel';
+import { REPORT_FOOTER, buildReport, reportFileName } from '@/report/reportModel';
 import { escapeHtml, renderReportHtml } from '@/report/renderHtml';
 import { migrate } from '@/storage/db';
 
@@ -44,7 +44,7 @@ describe('report model', () => {
       'Event started: Pushing',
       'Crown',
       'Head',
-      'Session finished',
+      'Finish time',
       'Event ended: Pushing',
     ]);
     const head = r.timeline.find((x) => x.label === 'Head')!;
@@ -148,6 +148,16 @@ describe('HTML rendering', () => {
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; &amp; co');
     expect(escapeHtml(`'`)).toBe('&#39;');
+  });
+
+  it('uses the device-clock footer on screen and in the PDF', async () => {
+    const c = await SessionController.start(deps());
+    const r = buildReport(c.getState().data, wallMs(clock.wall), null);
+    expect(r.footer).toBe("Times are captured using this device's internal clock, verify for accuracy.");
+    expect(r.footer).toBe(REPORT_FOOTER);
+    expect(renderReportHtml(r)).toContain(
+      '<footer>Times are captured using this device&#39;s internal clock, verify for accuracy.</footer>',
+    );
   });
 
   it('A10 includes all 500 entries with overlapping events, long labels, and corrections', async () => {
