@@ -28,7 +28,7 @@ Prototype status against the scenario IDs in `docs/Birthmark_MVP.md`. "Automated
 | R10 | Device | Five-minute comparison against an independent timer |
 | L01-L02 | Device | Landscape is locked (both directions via `expo-screen-orientation`). Distance reading needs testers |
 | L03 | Automated | `tests/time.test.ts` noon/midnight. The toggle is display-only |
-| L04 | Automated (order, width) / device | `tests/timeline.test.ts` exact order, Resuscitate and APGAR kept out of the capture codes; `tests/milestoneLayout.test.ts` "milestone row items (L04, L06)" row contents and all buttons fit the row width or fall back to scrolling. The buttons stretch to fill the left column's height. Label fit and the stretched height on real screens need a device check |
+| L04 | Automated (order, width) / device | `tests/timeline.test.ts` exact order, Resuscitate and APGAR kept out of the capture codes; `tests/milestoneLayout.test.ts` "milestone row items (L04, L06)" row contents and all buttons fit the row width or fall back to scrolling. Buttons are a fixed 64pt tall (`MILESTONE_BUTTON_HEIGHT`). Label fit on real screens needs a device check |
 | L05 | Automated | `tests/timeline.test.ts` "Since Crown" |
 | L06 | Automated / device | "milestone row (L06)" (controller); `tests/milestoneLayout.test.ts` "L06 after First Cry" row is Separation Gush, Placenta, APGAR (opens the editor, records no moment), Go back (restores the full row). Button wiring needs a device check |
 | L07 | Automated | `tests/timeline.test.ts` "opens tel:911 exactly once" |

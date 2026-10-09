@@ -2,6 +2,9 @@ import type { RowMode } from '../domain/timeline';
 import { FULL_ROW, POST_FIRST_CRY_ROW, type RowMilestoneCode } from '../domain/types';
 import { TOUCH, space } from './theme';
 
+/** Milestone button height: the original size, not stretched to fill the column. */
+export const MILESTONE_BUTTON_HEIGHT = 64;
+
 /** Button width for the milestone row when it has to scroll. */
 export const SCROLL_BUTTON_WIDTH = Math.round(TOUCH * 1.6);
 
@@ -58,11 +61,11 @@ export function milestoneRowItems(mode: RowMode): MilestoneRowItem[] {
 /**
  * Share of the recording screen's height for the full-width clock band versus
  * the area under it. The clock takes a third. When an unlabeled capture shows
- * the label box, the clock gives up a little (a quarter) so the milestone
- * buttons keep at least a touch target of height on a ~390pt landscape phone.
+ * the label box, the clock shrinks to a fifth so the full-height milestone
+ * buttons (MILESTONE_BUTTON_HEIGHT) still fit on a ~390pt landscape phone.
  */
 export function recordingBands(hasLabelTarget: boolean): { clock: number; body: number } {
-  return hasLabelTarget ? { clock: 1, body: 3 } : { clock: 1, body: 2 };
+  return hasLabelTarget ? { clock: 1, body: 4 } : { clock: 1, body: 2 };
 }
 
 /** Floor and ceiling for the "Time since" value, in points. */
@@ -82,20 +85,4 @@ export function sinceTimerFonts(clockFontSize: number): { label: number; value: 
   );
   const label = Math.round(Math.min(Math.max(value * 0.4, 16), 36));
   return { label, value };
-}
-
-/**
- * Narrowest slot that fits an icon plus a one-word label ("History") on one
- * line: 22 icon + 8 gap + ~62 text at 17pt bold + 2 x 8 padding + 4 border.
- */
-export const LABELED_SLOT_MIN = 112;
-
-/**
- * Whether two equal slots sharing `barWidth` (with `gap` between) are wide
- * enough for icon beside label. Below that the icon stacks over a smaller
- * label, so the label always shows and a word never wraps mid-letter. Unmeasured (0) shows labels for the first frame.
- */
-export function headerShowsLabels(barWidth: number, gap: number = space.sm, slots = 2): boolean {
-  if (!(barWidth > 0)) return true;
-  return (barWidth - gap * (slots - 1)) / slots >= LABELED_SLOT_MIN;
 }

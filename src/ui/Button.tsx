@@ -24,8 +24,6 @@ type Props = {
   icon?: IconName;
   /** Show only the icon. `label` is still required and becomes the accessibility label. */
   iconOnly?: boolean;
-  /** Icon above a smaller label, for slots too narrow for icon and label side by side. */
-  stacked?: boolean;
 };
 
 export function Button({
@@ -41,9 +39,8 @@ export function Button({
   selected,
   icon,
   iconOnly,
-  stacked,
 }: Props) {
-  const textStyle = [styles.text, textStyles[variant], large && styles.largeText, stacked && styles.stackedText];
+  const textStyle = [styles.text, textStyles[variant], large && styles.largeText];
   const iconSize = large ? 26 : 22;
   return (
     <Pressable
@@ -62,7 +59,7 @@ export function Button({
         pressed && styles.pressed,
         style,
       ]}>
-      <View style={[styles.content, stacked && styles.stackedContent]}>
+      <View style={styles.content}>
         {icon ? (
           <Ionicons
             name={icon}
@@ -100,8 +97,6 @@ const styles = StyleSheet.create({
   warning: { backgroundColor: colors.warning, borderColor: colors.warning },
   large: { minHeight: 72, paddingHorizontal: space.xl },
   content: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm },
-  stackedContent: { flexDirection: 'column', gap: 2 },
-  stackedText: { fontSize: 14 },
   disabled: { opacity: 0.45 },
   pressed: { opacity: 0.7 },
   text: { fontSize: 17, fontWeight: '700', textAlign: 'center' },

@@ -20,8 +20,7 @@ import type { MilestoneCode, RowMilestoneCode } from '../domain/types';
 import { appStore, useAppState, useClockTick, useControllerState } from '../state/store';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { headerShowsLabels, recordingBands, sinceTimerFonts } from '../ui/milestoneLayout';
-import { saveStatusView } from '../ui/saveStatusView';
+import { recordingBands, sinceTimerFonts } from '../ui/milestoneLayout';
 import { colors, space, type } from '../ui/theme';
 
 export default function RecordScreen() {
@@ -46,8 +45,6 @@ function Recording({ controller }: { controller: SessionController }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   // Fitted clock font, so "Time since" scales with it and never outgrows it.
   const [clockFont, setClockFont] = useState(72);
-  // Width of the History / Finish bar; too narrow and the icons stack over the labels.
-  const [barWidth, setBarWidth] = useState(0);
   const keyboardUp = useKeyboardVisible();
 
   const { data } = state;
@@ -73,8 +70,6 @@ function Recording({ controller }: { controller: SessionController }) {
   const target = state.labelTargetId ? data.moments.find((m) => m.id === state.labelTargetId) ?? null : null;
   const bands = recordingBands(target !== null);
   const since = sinceTimerFonts(clockFont);
-  const labels = headerShowsLabels(barWidth);
-  const idle = saveStatusView(state.queue) === 'history';
 
   const milestone = (code: RowMilestoneCode | Extract<MilestoneCode, 'RESUSCITATE'>) => {
     controller.markMilestone(code);
@@ -108,6 +103,19 @@ function Recording({ controller }: { controller: SessionController }) {
             onToggle={() => appStore.toggleClockFormat()}
             onFontSize={setClockFont}
           />
+          {/* Finish shares the clock's row, bottom right. A pending or failed
+              write shows Saving / Not saved above it; nothing while idle. */}
+          <View style={styles.clockSide}>
+            <SaveStatus queue={state.queue} onRetry={() => controller.retry()} idleHistory={false} />
+            <Button
+              label="Finish"
+              icon="checkmark-circle"
+              variant="primary"
+              onPress={() => setConfirmFinish(true)}
+              accessibilityHint="Asks before finishing"
+              testID="finish"
+            />
+          </View>
         </View>
 
         <View style={[styles.row, { flex: bands.body }]}>
@@ -149,39 +157,6 @@ function Recording({ controller }: { controller: SessionController }) {
           </View>
 
           <View style={styles.right}>
-            {/* History holds the save-status slot: a pending or failed write
-                replaces it with Saving / Not saved, at the same width, so the
-                bar never reflows on a capture. */}
-            <View style={styles.topBar} onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}>
-              <View style={styles.slot}>
-                {idle ? (
-                  <Button
-                    label="History"
-                    icon="time-outline"
-                    stacked={!labels}
-                    variant="secondary"
-                    style={styles.barButton}
-                    accessibilityHint="Opens finished sessions. Recording keeps running."
-                    onPress={() => router.push('/history')}
-                    testID="record-history"
-                  />
-                ) : (
-                  <SaveStatus queue={state.queue} onRetry={() => controller.retry()} />
-                )}
-              </View>
-              <View style={styles.slot}>
-                <Button
-                  label="Finish"
-                  icon="checkmark-circle"
-                  stacked={!labels}
-                  variant="primary"
-                  style={styles.barButton}
-                  onPress={() => setConfirmFinish(true)}
-                  accessibilityHint="Asks before finishing"
-                  testID="finish"
-                />
-              </View>
-            </View>
             <LiveStatusPanel
               moments={data.moments}
               events={data.events}
@@ -229,9 +204,12 @@ const styles = StyleSheet.create({
   finishingTitle: { fontSize: 28, fontWeight: '800', color: colors.ink },
   finishingBody: { fontSize: 18, color: colors.slate, textAlign: 'center', maxWidth: 560 },
   column: { flex: 1 },
-  // flex comes from recordingBands(): 1 of 3 normally, 1 of 4 while the label box shows.
+  // flex comes from recordingBands(): 1 of 3 normally, 1 of 5 while the label box shows.
   clockBand: {
+    flexDirection: 'row',
+    gap: space.md,
     paddingHorizontal: space.lg,
+    paddingBottom: space.sm,
     paddingTop: space.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
@@ -251,9 +229,7 @@ const styles = StyleSheet.create({
   // Sizes come from sinceTimerFonts(); these are the static parts.
   timerLabel: { fontWeight: '700', color: colors.slate, textTransform: 'uppercase', letterSpacing: 0.5 },
   timerValue: { fontWeight: '800', color: colors.ink },
-  topBar: { flexDirection: 'row', gap: space.sm, alignItems: 'stretch' },
-  slot: { flex: 1, justifyContent: 'center' },
-  barButton: { paddingHorizontal: space.sm },
+  clockSide: { justifyContent: 'flex-end', alignItems: 'flex-end', gap: space.xs },
   actions: { flexDirection: 'row', gap: space.sm, alignItems: 'stretch' },
   emergency: { flex: 1 },
   hidden: { display: 'none' },

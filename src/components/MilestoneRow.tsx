@@ -12,8 +12,8 @@ import {
 
 import type { RowMode } from '../domain/timeline';
 import { type RowMilestoneCode, milestoneLabel } from '../domain/types';
-import { type MilestoneRowItem, milestoneRowItems, milestoneRowLayout } from '../ui/milestoneLayout';
-import { TOUCH, colors, radius, space } from '../ui/theme';
+import { MILESTONE_BUTTON_HEIGHT, type MilestoneRowItem, milestoneRowItems, milestoneRowLayout } from '../ui/milestoneLayout';
+import { colors, radius, space } from '../ui/theme';
 
 type Props = {
   mode: RowMode;
@@ -25,8 +25,7 @@ type Props = {
 
 /**
  * Milestone buttons sized so the whole row fits the viewport (First Cry is
- * visible without sliding) and stretched to fill the height the parent gives
- * the row. If fitting would drop a button below the touch target, the row
+ * visible without sliding), at a fixed MILESTONE_BUTTON_HEIGHT. If fitting would drop a button below the touch target, the row
  * scrolls instead and shows a scroll cue. The row stays inside a horizontal
  * ScrollView either way: a drag goes to the ScrollView and cancels the press,
  * so swiping never captures.
@@ -121,17 +120,14 @@ export function MilestoneRow({ mode, onCapture, onApgar, onShowAll }: Props) {
 }
 
 const styles = StyleSheet.create({
-  // flex: the row takes whatever height the left column has left, so the
-  // buttons grow to fill it. Never shorter than a touch target.
-  wrap: { position: 'relative', flex: 1, minHeight: TOUCH },
-  scroll: { flex: 1 },
-  // A horizontal ScrollView lays its content out in a row, and the content
-  // container stretches to the ScrollView's height, so buttons stretch too.
-  fitRow: { flexGrow: 1, gap: space.sm, alignItems: 'stretch' },
-  scrollRow: { gap: space.sm, paddingRight: space.xl, alignItems: 'stretch' },
+  // Fixed-height row (MILESTONE_BUTTON_HEIGHT); it does not stretch to fill the column.
+  wrap: { position: 'relative' },
+  scroll: { flexGrow: 0 },
+  fitRow: { flexGrow: 1, gap: space.sm },
+  scrollRow: { gap: space.sm, paddingRight: space.xl },
   flexButton: { flex: 1 },
   button: {
-    minHeight: TOUCH,
+    minHeight: MILESTONE_BUTTON_HEIGHT,
     borderRadius: radius.md,
     backgroundColor: colors.ink,
     alignItems: 'center',

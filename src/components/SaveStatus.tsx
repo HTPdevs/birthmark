@@ -8,10 +8,19 @@ import { colors, radius, space } from '../ui/theme';
 
 /**
  * Failed save: "Not saved · Retry" (tap retries). Queued writes: "Saving".
- * Otherwise a History button. Never claims "Saved" before every queued write
- * has committed.
+ * Otherwise a History button, or nothing when `idleHistory` is false (the
+ * recording screen has no History). Never claims "Saved" before every queued
+ * write has committed.
  */
-export function SaveStatus({ queue, onRetry }: { queue: QueueStatus; onRetry: () => void }) {
+export function SaveStatus({
+  queue,
+  onRetry,
+  idleHistory = true,
+}: {
+  queue: QueueStatus;
+  onRetry: () => void;
+  idleHistory?: boolean;
+}) {
   const view = saveStatusView(queue);
   if (view === 'failed') {
     return (
@@ -31,6 +40,7 @@ export function SaveStatus({ queue, onRetry }: { queue: QueueStatus; onRetry: ()
       </View>
     );
   }
+  if (!idleHistory) return null;
   return (
     <Button
       label="History"
