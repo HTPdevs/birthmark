@@ -1,5 +1,5 @@
 import { CALL_FALLBACK_MESSAGE, type PhoneAdapter, requestEmergencyCall } from '@/domain/emergency';
-import { deriveRowMode, liveStatus, sinceLastMoment, sortByEffective } from '@/domain/timeline';
+import { deriveRowMode, liveStatus, momentName, sinceLastMoment, sortByEffective } from '@/domain/timeline';
 import {
   FULL_ROW,
   MILESTONES,
@@ -61,6 +61,18 @@ describe('milestone order (L04)', () => {
     const dedicated = ['RESUSCITATE', 'APGAR'];
     const reachable = new Set<string>([...FULL_ROW, ...POST_FIRST_CRY_ROW, ...dedicated]);
     expect([...reachable].sort()).toEqual(MILESTONES.map((m) => m.code).sort());
+  });
+});
+
+describe('moment names', () => {
+  it('keeps the milestone name when a label or note is added', () => {
+    expect(momentName(moment({ elapsed: 0, kind: 'milestone', milestoneCode: 'CROWN' }), [])).toBe('Crown');
+    expect(momentName(moment({ elapsed: 0, kind: 'milestone', milestoneCode: 'CROWN', label: 'slow' }), [])).toBe('Crown: slow');
+    expect(momentName(moment({ elapsed: 0, kind: 'milestone', milestoneCode: 'CROWN', label: '  ' }), [])).toBe('Crown');
+  });
+
+  it('names the finish boundary Finish time', () => {
+    expect(momentName(moment({ elapsed: 0, kind: 'finish', momentNumber: null }), [])).toBe('Finish time');
   });
 });
 
