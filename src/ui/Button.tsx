@@ -1,8 +1,12 @@
-import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import type { ComponentProps } from 'react';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { TOUCH, colors, radius, space } from './theme';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'emergency' | 'danger' | 'warning';
+
+export type IconName = ComponentProps<typeof Ionicons>['name'];
 
 type Props = {
   label: string;
@@ -16,6 +20,10 @@ type Props = {
   testID?: string;
   /** Set for a choice in a group (Yes / No); announced as selected. */
   selected?: boolean;
+  /** Ionicons glyph drawn before the label. Bundled font, so it works offline. */
+  icon?: IconName;
+  /** Show only the icon. `label` is still required and becomes the accessibility label. */
+  iconOnly?: boolean;
 };
 
 export function Button({
@@ -29,7 +37,11 @@ export function Button({
   large,
   testID,
   selected,
+  icon,
+  iconOnly,
 }: Props) {
+  const textStyle = [styles.text, textStyles[variant], large && styles.largeText];
+  const iconSize = large ? 26 : 22;
   return (
     <Pressable
       testID={testID}
@@ -47,12 +59,21 @@ export function Button({
         pressed && styles.pressed,
         style,
       ]}>
-      <Text
-        style={[styles.text, textStyles[variant], large && styles.largeText]}
-        numberOfLines={2}
-        maxFontSizeMultiplier={1.6}>
-        {label}
-      </Text>
+      <View style={styles.content}>
+        {icon ? (
+          <Ionicons
+            name={icon}
+            size={iconOnly ? iconSize + 6 : iconSize}
+            color={StyleSheet.flatten(textStyles[variant]).color}
+            accessible={false}
+          />
+        ) : null}
+        {iconOnly && icon ? null : (
+          <Text style={textStyle} numberOfLines={2} maxFontSizeMultiplier={1.6}>
+            {label}
+          </Text>
+        )}
+      </View>
     </Pressable>
   );
 }
@@ -75,6 +96,7 @@ const styles = StyleSheet.create({
   danger: { backgroundColor: colors.paper, borderColor: colors.danger },
   warning: { backgroundColor: colors.warning, borderColor: colors.warning },
   large: { minHeight: 72, paddingHorizontal: space.xl },
+  content: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm },
   disabled: { opacity: 0.45 },
   pressed: { opacity: 0.7 },
   text: { fontSize: 17, fontWeight: '700', textAlign: 'center' },
