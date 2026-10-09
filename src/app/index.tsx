@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
@@ -9,6 +10,10 @@ import { hasNativeClock } from "../platform/clock";
 import { appStore, useAppState } from "../state/store";
 import { Button } from "../ui/Button";
 import { colors, radius, space, type } from "../ui/theme";
+
+// assets/lockup.png is 1969 x 588 px; keep that aspect ratio.
+const LOCKUP_HEIGHT = 64;
+const LOCKUP_WIDTH = Math.round((LOCKUP_HEIGHT * 1969) / 588);
 
 export default function Home() {
   const { active, sessions } = useAppState();
@@ -45,9 +50,19 @@ export default function Home() {
       edges={["left", "right", "top", "bottom"]}
     >
       <View style={styles.left}>
-        <Text style={styles.brand} accessibilityRole="header">
-          Birthmark
-        </Text>
+        <View
+          style={styles.lockup}
+          accessible
+          accessibilityRole="header"
+          accessibilityLabel="Birthmark"
+        >
+          <Image
+            source={require("../../assets/lockup.png")}
+            style={styles.lockupImage}
+            contentFit="contain"
+            accessible={false}
+          />
+        </View>
         <Text style={styles.tagline}>
           Seamlessly document the birth flow in real-time
         </Text>
@@ -136,12 +151,8 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1,
     borderLeftColor: colors.line,
   },
-  brand: {
-    fontSize: 48,
-    fontWeight: "900",
-    color: colors.ink,
-    letterSpacing: -1,
-  },
+  lockup: { alignSelf: "flex-start" },
+  lockupImage: { width: LOCKUP_WIDTH, height: LOCKUP_HEIGHT },
   tagline: { fontSize: 20, color: colors.slate },
   fine: { fontSize: 14, color: colors.danger, lineHeight: 20, maxWidth: 560 },
   warn: {
