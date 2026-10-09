@@ -41,7 +41,7 @@ Development builds never place a call: the Emergency button shows `Demo - no cal
 
 | Path | Role |
 | --- | --- |
-| `src/app/` | Routes: home/history (`index`), recording (`record`), report (`report/[id]`) |
+| `src/app/` | Routes: home (`index`), history (`history`), recording (`record`), report (`report/[id]`) |
 | `src/components/` | Clock, milestone row, live status, capture bar (Resuscitate, APGAR, label box), APGAR editor, emergency, correction sheets |
 | `src/domain/` | Types, time rules, timeline derivations, manual time entry, session controller, emergency handoff |
 | `src/storage/` | SQLite schema/migrations, repository, serialized write queue |
