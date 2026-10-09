@@ -57,7 +57,6 @@ function Report({ controller }: { controller: SessionController }) {
   const { data } = state;
   const isActive = data.session.status === 'active';
   const report = buildReport(data, snapshot.wallEpochMs, controller.elapsedAt(snapshot));
-  const [captureOrder, setCaptureOrder] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [apgarOpen, setApgarOpen] = useState(false);
@@ -65,7 +64,6 @@ function Report({ controller }: { controller: SessionController }) {
   const [exportState, setExportState] = useState<ExportState>({ kind: 'idle' });
   const [error, setError] = useState<string | null>(null);
 
-  const rows = captureOrder ? [...report.timeline].sort((a, b) => a.sequence - b.sequence) : report.timeline;
   const otherActive = active && active.sessionId !== controller.sessionId;
 
   const exportPdf = async () => {
@@ -113,22 +111,15 @@ function Report({ controller }: { controller: SessionController }) {
       <ScrollView contentContainerStyle={styles.body}>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <View style={styles.meta}>
-          <Meta k="Session" v={`${report.header.shortId} (${report.header.sessionId})`} />
           <Meta k="Date" v={report.header.sessionDate} />
-          <Meta k="Start" v={report.header.start} />
-          <Meta k="End" v={report.header.end} />
-          <Meta k="Timezone" v={`${report.header.timezone} (${report.header.offsets})`} />
+          <Meta k="Start" v={report.header.startTime} />
+          <Meta k="End" v={report.header.endTime} />
           <Meta k="Total elapsed" v={report.header.totalElapsed} />
         </View>
 
         <View style={styles.actions}>
           <Button label="APGAR" onPress={() => setApgarOpen(true)} />
           <Button label="Add missed moment" onPress={() => setAddOpen(true)} />
-          <Button
-            label={captureOrder ? 'Showing capture order' : 'Show capture order'}
-            variant={captureOrder ? 'primary' : 'secondary'}
-            onPress={() => setCaptureOrder((v) => !v)}
-          />
           {!isActive ? (
             <Button
               label="Resume session"
@@ -143,7 +134,7 @@ function Report({ controller }: { controller: SessionController }) {
         <Text style={styles.h2}>Timeline</Text>
         <Text style={styles.hint}>Tap a moment to rename, flag, or correct it.</Text>
         <TableHead cols={['#', 'Label', 'Time (24h)', 'Elapsed', 'Since prev.', 'Group', 'Flags']} />
-        {rows.map((r) => (
+        {report.timeline.map((r) => (
           <TimelineRowView key={r.momentId} row={r} onPress={r.isSystem ? undefined : () => setEditing(r.momentId)} />
         ))}
 

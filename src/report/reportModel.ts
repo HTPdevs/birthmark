@@ -33,6 +33,10 @@ export type ReportModel = {
     sessionDate: string;
     start: string;
     end: string;
+    /** Start clock time only (24h, no date), for the on-screen report. */
+    startTime: string;
+    /** End clock time only (24h, no date), or "In progress", for the on-screen report. */
+    endTime: string;
     timezone: string;
     offsets: string;
     totalElapsed: string;
@@ -242,6 +246,8 @@ export function buildReport(data: SessionData, generatedAt: WallMs, nowElapsed: 
       sessionDate,
       start: formatDateTime(session.startedSnapshot.wallEpochMs, off0),
       end: end ? formatDateTime(end.wallEpochMs, end.utcOffsetMinutes) : 'In progress',
+      startTime: formatTime24(session.startedSnapshot.wallEpochMs, off0),
+      endTime: end ? formatTime24(end.wallEpochMs, end.utcOffsetMinutes) : 'In progress',
       timezone: session.startedSnapshot.timezoneId,
       offsets: [...offsets].map(formatOffset).join(', '),
       totalElapsed: totalElapsed === null ? DASH : formatElapsed(totalElapsed),

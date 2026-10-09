@@ -36,6 +36,10 @@ Prototype status against the scenario IDs in `docs/Birthmark_MVP.md`. "Automated
 | L09-L10 | Automated | "APGAR (L09, L10)" |
 | L11 | Automated | "reports an unavailable phone handler" |
 
+## On-screen report vs PDF
+
+The on-screen report is a trimmed view; the PDF (`src/report/renderHtml.ts`) is unchanged and still carries every section of the spec's report structure. On screen, the header shows Date, Start and End (time only, from `header.startTime` / `header.endTime`, tested in `tests/report.test.ts`), and Total elapsed. Session ID, Timezone, and the Show capture order toggle are removed.
+
 ## Verified in this pass
 
 - `npm test`: 57 tests pass.

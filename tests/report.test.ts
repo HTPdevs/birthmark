@@ -36,6 +36,8 @@ describe('report model', () => {
     const r = buildReport(c.getState().data, wallMs(clock.wall), null);
     expect(r.header.start).toBe('2026-10-07 14:22:08');
     expect(r.header.end).toBe('2026-10-07 14:23:08');
+    expect(r.header.startTime).toBe('14:22:08');
+    expect(r.header.endTime).toBe('14:23:08');
     expect(r.header.totalElapsed).toBe('00:01:00');
     expect(r.header.offsets).toBe('UTC-07:00');
     expect(r.timeline.map((x) => x.label)).toEqual([
@@ -91,6 +93,26 @@ describe('report model', () => {
     expect(r.timeline[0].time).toBe('2026-10-08 01:22:08 UTC-06:00');
     expect(r.timeline[0].elapsed).toBe('10:00:00');
     expect(r.header.offsets).toBe('UTC-07:00, UTC-06:00');
+  });
+
+  it('gives time-only start and end for the on-screen header, In progress while active', async () => {
+    const c = await SessionController.start(deps());
+    clock.advance(30_000);
+    const live = buildReport(c.getState().data, wallMs(clock.wall), c.elapsedAt(clock.read()));
+    expect(live.header.startTime).toBe('14:22:08');
+    expect(live.header.endTime).toBe('In progress');
+    expect(live.header.end).toBe('In progress');
+    // The PDF keeps the full date and time.
+    expect(live.header.start).toBe('2026-10-07 14:22:08');
+
+    // An end past midnight in a new offset shows the end's own local time, no date.
+    clock.advance(10 * 3600_000);
+    clock.timezoneId = 'America/Denver';
+    clock.offset = -360;
+    await c.finish();
+    const done = buildReport(c.getState().data, wallMs(clock.wall), null);
+    expect(done.header.endTime).toBe('01:22:38');
+    expect(done.header.end).toBe('2026-10-08 01:22:38');
   });
 
   it('identifies corrected and manual values with their originals', async () => {
