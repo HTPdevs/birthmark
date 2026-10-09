@@ -5,10 +5,10 @@ Prototype status against the scenario IDs in `docs/Birthmark_MVP.md`. "Automated
 | ID | Status | Evidence |
 | --- | --- | --- |
 | A01 | Automated | `tests/sessionController.test.ts` "A01 start" (one active session also enforced by a partial unique index) |
-| A02 | Automated | "A02 keeps the capture time when labelled later" |
-| A03 | Automated | "A03 persists five rapid captures" |
+| A02 | Automated (domain) | "A02 keeps the capture time when labelled later". The recording screen has no Mark moment button since the October 2026 layout change |
+| A03 | Automated (domain) | "A03 persists five rapid captures". No Mark moment button on the recording screen |
 | A04 | Automated (capture) / manual (swipe) | One Head moment saved per tap. Swipe-without-capture relies on ScrollView cancelling the press; check on device |
-| A05 | Automated | "A05 overlapping events" |
+| A05 | Automated (domain) | "A05 overlapping events". No Events button on the recording screen, so events cannot be started from the UI |
 | A06 | Automated | "A06 ... finish uses one boundary for everything" |
 | A07 | Automated | "A07 resume includes the gap" |
 | A08 | Automated | "A08 correct, flag, and add missed moment" |
@@ -28,7 +28,7 @@ Prototype status against the scenario IDs in `docs/Birthmark_MVP.md`. "Automated
 | R10 | Device | Five-minute comparison against an independent timer |
 | L01-L02 | Device | Landscape is locked (both directions via `expo-screen-orientation`). Distance reading needs testers |
 | L03 | Automated | `tests/time.test.ts` noon/midnight. The toggle is display-only |
-| L04 | Automated (order) | `tests/timeline.test.ts` exact order |
+| L04 | Automated (order, width) / device | `tests/timeline.test.ts` exact order, Resuscitate and APGAR kept out of the rows; `tests/milestoneLayout.test.ts` all buttons fit the row width or fall back to scrolling. Label fit on real screens needs a device check |
 | L05 | Automated | `tests/timeline.test.ts` "Since Crown" |
 | L06 | Automated | "milestone row (L06)" |
 | L07 | Automated | `tests/timeline.test.ts` "opens tel:911 exactly once" |
@@ -38,7 +38,7 @@ Prototype status against the scenario IDs in `docs/Birthmark_MVP.md`. "Automated
 
 ## Verified in this pass
 
-- `npm test`: 57 tests pass.
+- `npm test`: 92 tests pass.
 - `npm run typecheck` and `npm run lint` are clean.
 - Android debug build of the dev client (`expo run:android`), including the Kotlin `ClockSnapshot` module, built and installed on a Pixel 7 emulator (API 37). The app launched in landscape. Start, milestone capture, live status ("Since ROM"), finish, and the report screen ran on the emulator.
 
@@ -47,3 +47,4 @@ Prototype status against the scenario IDs in `docs/Birthmark_MVP.md`. "Automated
 - iOS: this machine has no Xcode, so the Swift module and iOS build have not been compiled.
 - PDF output: the HTML is tested, but no generated PDF has been opened and reviewed.
 - Every physical-device, offline Release-build, and practice-tester scenario.
+- The October 2026 recording layout (Resuscitate and APGAR buttons, fitted milestone row, no Events button) has not been run on a device or emulator.
