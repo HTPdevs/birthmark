@@ -11,7 +11,7 @@
     "backgroundColor": "#FAF3EC",
     "ios": {
       "icon": "./assets/ios-icon-1024.png",
-      "bundleIdentifier": "com.birthmark.app",
+      "bundleIdentifier": "com.htpdevs.birthmark",
       "supportsTablet": true,
       "requireFullScreen": true,
       "infoPlist": {
@@ -22,6 +22,12 @@
     "android": {
       "package": "com.htpdevs.birthmark",
       "allowBackup": false,
+      "blockedPermissions": [
+        "android.permission.INTERNET",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#E8775A",
@@ -61,7 +67,8 @@
           "imageWidth": 76
         }
       ],
-      "./plugins/withNoUserScriptSandboxing"
+      "./plugins/withNoUserScriptSandboxing",
+      "./plugins/withDebugOnlyInternet"
     ],
     "experiments": {
       "typedRoutes": true,

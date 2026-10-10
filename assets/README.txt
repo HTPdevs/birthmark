@@ -11,6 +11,8 @@ LOGO
 
 iOS
   ios-icon-1024.png                 Upload to Xcode / App Store Connect. Square on purpose — iOS rounds the corners.
+                                    No alpha channel: App Store Connect rejects icons with one.
+                                    Re-export: magick in.png -background '#E8775A' -alpha remove -alpha off -strip PNG24:ios-icon-1024.png
 
 ANDROID (adaptive icon = two layers that Android stacks and masks)
   android-background.svg / -432.png Background layer: solid coral by design
@@ -18,6 +20,9 @@ ANDROID (adaptive icon = two layers that Android stacks and masks)
                                     Looks like "just hands" on white; correct when stacked on coral.
   android-monochrome.svg            Themed-icon layer (Android 13+)
   play-store-512.png                Google Play listing icon
+  play-feature-graphic-1024x500.png Google Play feature graphic: lockup.png at 720px wide, centered on cream.
+                                    24-bit PNG, no alpha. Rebuild:
+                                    magick -size 1024x500 xc:'#FAF3EC' \( lockup.png -resize 720x \) -gravity center -composite -alpha off -strip PNG24:play-feature-graphic-1024x500.png
 
 WEB
   favicon.svg, favicon-16/32/48.png, apple-touch-icon-180.png
