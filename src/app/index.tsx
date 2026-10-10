@@ -116,6 +116,14 @@ export default function Home() {
         </ScrollView>
         <View style={styles.topBar}>
           <Button
+            label="Privacy"
+            icon="shield-checkmark-outline"
+            variant="ghost"
+            accessibilityHint="Opens the privacy policy"
+            onPress={() => router.push("/privacy")}
+            testID="open-privacy"
+          />
+          <Button
             label="History"
             icon="time-outline"
             variant="ghost"
@@ -133,10 +141,16 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   // Inside the safe-area padding, so the absolute top bar stays clear of notches.
   body: { flex: 1 },
-  // Absolute so the History button does not push the centered content down.
+  // Absolute so the Privacy and History buttons do not push the centered content down.
+  // Privacy sits top left and History top right, so neither reaches the centered
+  // lockup on a short landscape phone. box-none keeps the gap between them tappable.
   topBar: {
     position: "absolute",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    pointerEvents: "box-none",
     top: 0,
+    left: 0,
     right: 0,
     zIndex: 1,
     paddingHorizontal: space.lg,

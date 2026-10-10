@@ -1,0 +1,9 @@
+<en-US>
+First release of Birthmark.
+- Record birth moments with one tap: ROM, Crown, Head, Body, First Cry, Separation Gush, Placenta
+- Dedicated Resuscitate button and APGAR scores at 1 and 5 minutes
+- Large real-time clock and time since the last moment
+- Review and correct the timeline, then export a PDF report
+- Emergency button opens your phone app to call 911
+- Works offline. Records stay on this device
+</en-US>
