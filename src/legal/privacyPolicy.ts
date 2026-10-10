@@ -1,9 +1,10 @@
 /**
- * Privacy policy text. Single source for the in-app Privacy screen and
- * docs/privacy-policy.md (the copy hosted for the Play Console URL field).
- * tests/privacyPolicy.test.ts fails when the two drift, and checks each claim
+ * Privacy policy text. Single source for the in-app Privacy screen,
+ * docs/privacy-policy.md, and site/privacy-policy/index.html (published by
+ * .github/workflows/pages.yml as the store listings' privacy policy URL).
+ * tests/privacyPolicy.test.ts fails when they drift, and checks each claim
  * below against the code and config it describes. Change the text here, then
- * regenerate the doc: UPDATE_PRIVACY_MD=1 npx jest tests/privacyPolicy.test.ts
+ * regenerate both: UPDATE_PRIVACY_MD=1 npx jest tests/privacyPolicy.test.ts
  */
 
 export const PRIVACY_DEVELOPER = 'HTPdevs';
