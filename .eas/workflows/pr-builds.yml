@@ -1,0 +1,31 @@
+name: PR builds
+
+# Builds the release configuration for both platforms on every pull request to
+# main, so a change that breaks prebuild or a native compile fails on the PR
+# instead of at store-build time. Uses the "pr" profile in eas.json: an Android
+# APK signed with the template debug keystore and an iOS simulator build, so it
+# needs no signing credentials. JS checks (typecheck, lint, jest) stay in
+# .github/workflows/ci.yml.
+
+on:
+  pull_request:
+    branches: ['main']
+
+concurrency:
+  cancel_in_progress: true
+  group: ${{ workflow.filename }}-${{ github.ref }}
+
+jobs:
+  build_android:
+    name: Build Android (APK)
+    type: build
+    params:
+      platform: android
+      profile: pr
+
+  build_ios:
+    name: Build iOS (simulator)
+    type: build
+    params:
+      platform: ios
+      profile: pr
