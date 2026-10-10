@@ -1,5 +1,5 @@
 import { execSync } from 'child_process';
-import { readFileSync, writeFileSync } from 'fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 import { EMERGENCY_NUMBER } from '@/domain/emergency';
@@ -12,6 +12,7 @@ import {
   PRIVACY_SECTIONS,
   privacyPolicyMarkdown,
 } from '@/legal/privacyPolicy';
+import { privacyPolicyHtml } from '@/legal/privacyPolicyHtml';
 
 const ROOT = join(__dirname, '..');
 const DOC = join(ROOT, 'docs', 'privacy-policy.md');
@@ -24,6 +25,39 @@ describe('privacy policy', () => {
     if (process.env.UPDATE_PRIVACY_MD) writeFileSync(DOC, md);
     // On failure: UPDATE_PRIVACY_MD=1 npx jest tests/privacyPolicy.test.ts
     expect(readFileSync(DOC, 'utf8')).toBe(md);
+  });
+
+  // The public URL for the store listings (GitHub Pages, .github/workflows/pages.yml).
+  describe('published page', () => {
+    const PAGE = join(ROOT, 'site', 'privacy-policy', 'index.html');
+    const html = privacyPolicyHtml();
+
+    it('site/privacy-policy/index.html matches the in-app text', () => {
+      if (process.env.UPDATE_PRIVACY_MD) {
+        mkdirSync(join(ROOT, 'site', 'privacy-policy'), { recursive: true });
+        writeFileSync(PAGE, html);
+      }
+      // On failure: UPDATE_PRIVACY_MD=1 npx jest tests/privacyPolicy.test.ts
+      expect(readFileSync(PAGE, 'utf8')).toBe(html);
+    });
+
+    it('contains every heading and paragraph, escaped', () => {
+      const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      for (const s of PRIVACY_SECTIONS) {
+        expect(html).toContain(`<h2>${esc(s.heading)}</h2>`);
+        for (const p of s.paragraphs) expect(html).toContain(esc(p).replace(PRIVACY_CONTACT, ''));
+      }
+      expect(html).toContain(`<a href="mailto:${PRIVACY_CONTACT}">${PRIVACY_CONTACT}</a>`);
+      expect(html).toContain(`Effective ${PRIVACY_EFFECTIVE_DATE}`);
+    });
+
+    it('is self-contained: no scripts and no external requests', () => {
+      expect(html).not.toMatch(/<script|<link|<img|@import|url\(|src=|https?:\/\//i);
+    });
+
+    it('site root redirects to the policy', () => {
+      expect(read('site/index.html')).toContain('url=privacy-policy/');
+    });
   });
 
   // Google Play User Data policy: the policy must name the developer and a

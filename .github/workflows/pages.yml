@@ -1,0 +1,38 @@
+name: Pages
+
+# Publishes site/ (the privacy policy) to GitHub Pages:
+# https://htpdevs.github.io/birthmark/privacy-policy/ is the privacy policy URL
+# for the Play Console and App Store Connect. site/privacy-policy/index.html is
+# generated from src/legal/privacyPolicy.ts; tests/privacyPolicy.test.ts (run by
+# ci.yml on every PR) fails if it drifts from the in-app text.
+
+on:
+  push:
+    branches: [main]
+    paths: ['site/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
