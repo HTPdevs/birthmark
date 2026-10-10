@@ -11,6 +11,16 @@
     "preview": {
       "distribution": "internal"
     },
+    "pr": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "withoutCredentials": true
+      },
+      "ios": {
+        "simulator": true
+      }
+    },
     "production": {
       "autoIncrement": true
     }
