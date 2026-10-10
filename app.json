@@ -20,7 +20,7 @@
       }
     },
     "android": {
-      "package": "com.birthmark.app",
+      "package": "com.htpdevs.birthmark",
       "allowBackup": false,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
