@@ -72,7 +72,13 @@ function Recording({ controller }: { controller: SessionController }) {
   const target = state.labelTargetId ? data.moments.find((m) => m.id === state.labelTargetId) ?? null : null;
   const bands = recordingBands(target !== null);
   const sinceValue = sinceLast === null ? '—' : formatElapsed(sinceLast);
-  const since = sinceTimerFonts(clockFont, { ...sinceBox, label: sinceHeading, value: sinceValue });
+  // Destructured: Reanimated's dev Babel plugin warns about any `x.value` in an
+  // inline style, mistaking it for a shared value read.
+  const { label: sinceLabelFont, value: sinceValueFont } = sinceTimerFonts(clockFont, {
+    ...sinceBox,
+    label: sinceHeading,
+    value: sinceValue,
+  });
 
   const milestone = (code: RowMilestoneCode | Extract<MilestoneCode, 'RESUSCITATE'>) => {
     controller.markMilestone(code);
@@ -139,13 +145,13 @@ function Recording({ controller }: { controller: SessionController }) {
               {/* Sized by sinceTimerFonts, not adjustsFontSizeToFit, which on
                   iOS collapsed the value to a few points in this flex box. */}
               <Text
-                style={[styles.timerLabel, { fontSize: since.label, lineHeight: Math.round(since.label * 1.2) }]}
+                style={[styles.timerLabel, { fontSize: sinceLabelFont, lineHeight: Math.round(sinceLabelFont * 1.2) }]}
                 numberOfLines={1}
                 maxFontSizeMultiplier={1}>
                 {sinceHeading}
               </Text>
               <Text
-                style={[styles.timerValue, type.tabular, { fontSize: since.value, lineHeight: Math.round(since.value * 1.1) }]}
+                style={[styles.timerValue, type.tabular, { fontSize: sinceValueFont, lineHeight: Math.round(sinceValueFont * 1.1) }]}
                 numberOfLines={1}
                 maxFontSizeMultiplier={1}>
                 {sinceValue}
