@@ -1,10 +1,12 @@
 name: Pages
 
-# Publishes site/ (the privacy policy) to GitHub Pages:
+# Publishes site/ to GitHub Pages:
 # https://htpdevs.github.io/birthmark/privacy-policy/ is the privacy policy URL
-# for the Play Console and App Store Connect. site/privacy-policy/index.html is
-# generated from src/legal/privacyPolicy.ts; tests/privacyPolicy.test.ts (run by
-# ci.yml on every PR) fails if it drifts from the in-app text.
+# and https://htpdevs.github.io/birthmark/support/ is the support URL for the
+# Play Console and App Store Connect. site/privacy-policy/index.html is
+# generated from src/legal/privacyPolicy.ts and site/support/index.html from
+# src/legal/supportPageHtml.ts; tests/privacyPolicy.test.ts and
+# tests/supportPage.test.ts (run by ci.yml on every PR) fail if they drift.
 
 on:
   push:
